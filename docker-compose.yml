@@ -12,6 +12,8 @@ services:
       - /app/.next
     environment:
       - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
     env_file:
       - .env.local
     depends_on:
