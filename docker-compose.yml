@@ -1,0 +1,118 @@
+services:
+  webapp:
+    build:
+      context: ./webapp
+      dockerfile: Dockerfile
+    container_name: webapp
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./webapp:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+    env_file:
+      - .env.local
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongo-primary:
+        condition: service_healthy
+      mongo-secondary:
+        condition: service_healthy
+    networks:
+      - data-net
+  # Redis service
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - data-net
+
+  redis-insight:
+    image: redislabs/redisinsight:latest
+    container_name: redis-insight
+    ports:
+      - "5540:5540"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - data-net
+  # MongoDB service
+  mongo-setup:
+    image: mongo:7
+    container_name: mongo-init
+    networks:
+      - data-net
+    depends_on:
+      mongo-primary:
+        condition: service_healthy
+      mongo-secondary:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: >
+      mongosh --host mongo-primary:27017 --eval "
+        rs.initiate({
+          _id: 'rs0',
+          members: [
+            { _id: 0, host: 'mongo-primary:27017', priority: 2 },
+            { _id: 1, host: 'mongo-secondary:27017', priority: 1 }
+          ]
+        });
+        print('Replica set initialisé !');
+      "
+  # # - Primary MongoDB instance
+  mongo-primary:
+    image: mongo:7
+    container_name: mongo-primary
+    hostname: mongo-primary
+    command: mongod --replSet rs0 --bind_ip_all
+    ports:
+      - "27017:27017"
+    networks:
+      - data-net
+    volumes:
+      - mongo-primary_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  # # - Secondary MongoDB instance
+  mongo-secondary:
+    image: mongo:7
+    container_name: mongo-secondary
+    hostname: mongo-secondary
+    command: mongod --replSet rs0 --bind_ip_all
+    ports:
+      - "27018:27017"
+    networks:
+      - data-net
+    volumes:
+      - mongo-secondary_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  data-net:
+    driver: bridge
+
+volumes:
+  redis_data:
+  mongo-primary_data:
+  mongo-secondary_data:
