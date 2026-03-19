@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { io } from 'socket.io-client';
 
-const socket = io('http://websocket:3001');
+const socket = io('http://websocket:3001?token=163');
 
 export default function Home() {
   return (
