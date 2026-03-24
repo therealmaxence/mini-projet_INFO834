@@ -1,0 +1,63 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.15, pytest-8.0.2, pluggy-1.6.0
+rootdir: /app
+plugins: anyio-4.12.1
+collected 3 items
+
+test_chat.py FFF                                                         [100%]
+
+=================================== FAILURES ===================================
+_____________________________ test_websocket_chat ______________________________
+
+    def test_websocket_chat():
+        with client.websocket_connect("/ws/alice") as websocket_alice:
+            # Check if alice is in online users
+            res = client.get("/analytics")
+            assert res.status_code == 200
+    
+            # Connect another user
+            with client.websocket_connect("/ws/bob") as websocket_bob:
+                # Alice sends a message
+                websocket_alice.send_json({"recipient": "all", "content": "Hello everyone!"})
+    
+                # Bob receives it
+                data = websocket_bob.receive_json()
+>               assert data["type"] == "message"
+E               AssertionError: assert 'users' == 'message'
+E                 
+E                 - message
+E                 + users
+
+test_chat.py:32: AssertionError
+_____________________________ test_rest_endpoints ______________________________
+
+    def test_rest_endpoints():
+        res = client.get("/messages")
+        assert res.status_code == 200
+        messages = res.json()
+>       assert len(messages) == 2 # The two messages from previous test
+E       AssertionError: assert 1 == 2
+E        +  where 1 = len([{'_id': '69b7f36319fc536dd8fa58fe', 'content': 'Hello everyone!', 'recipient': 'all', 'sender': 'alice', ...}])
+
+test_chat.py:49: AssertionError
+________________________________ test_analytics ________________________________
+
+    def test_analytics():
+        res = client.get("/analytics")
+        assert res.status_code == 200
+        data = res.json()
+>       assert data["total_messages"] == 2
+E       assert 1 == 2
+
+test_chat.py:61: AssertionError
+=============================== warnings summary ===============================
+../usr/local/lib/python3.11/site-packages/httpx/_client.py:680
+  /usr/local/lib/python3.11/site-packages/httpx/_client.py:680: DeprecationWarning: The 'app' shortcut is now deprecated. Use the explicit style 'transport=WSGITransport(app=...)' instead.
+    warnings.warn(message, DeprecationWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED test_chat.py::test_websocket_chat - AssertionError: assert 'users' == ...
+FAILED test_chat.py::test_rest_endpoints - AssertionError: assert 1 == 2
+FAILED test_chat.py::test_analytics - assert 1 == 2
+========================= 3 failed, 1 warning in 0.94s =========================

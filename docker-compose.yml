@@ -25,6 +25,29 @@ services:
         condition: service_healthy
     networks:
       - data-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - MONGODB_URI=mongodb://mongo-primary:27017,mongo-secondary:27017/?replicaSet=rs0
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongo-primary:
+        condition: service_healthy
+      mongo-secondary:
+        condition: service_healthy
+    networks:
+      - data-net
+    restart: always
   # Redis service
   redis:
     image: redis:7
