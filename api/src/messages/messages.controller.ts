@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Res, Request, UseGuards, UnauthorizedException, NotFoundException, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { AuthGuard, RolesGuard, Roles } from '../auth/auth.guard';
 import { memoryStorage } from 'multer';
 import { MessageType } from './entities/message.entity';
@@ -30,17 +30,18 @@ export class MessagesController {
     @Body() createMessageDto: CreateMessageDto,
     @Request() req
   ) {
+    await this.channelsService.findOne(createMessageDto.channel.toString()); // Check if channel exists
     return this.messagesService.create(req.user.sub._id, createMessageDto, file);
   }
 
   @Get()
-  @Roles(Role.ADMIN)
-  async findAll() {
-    return this.messagesService.findAll();
+  async findAll(@Request() req) {
+    if (req.user.sub.role == Role.ADMIN)
+      return this.messagesService.findAll();
+    return this.messagesService.findBy({ owner: req.user.sub._id })
   }
 
   @Get('channel/:id')
-  @Roles(Role.ADMIN)
   async findAllByChannel(@Param('id') id: string, @Request() req) {
     const channel = await this.channelsService.findOne(id);
     const isVisible = this.channelsService.isVisible(channel, req.user.sub);

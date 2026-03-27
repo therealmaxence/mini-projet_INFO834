@@ -23,8 +23,7 @@ export class ChannelsController {
   async findAll(@Request() req) {
     if (req.user.sub.role == Role.ADMIN)
       return this.channelsService.findAll();
-    else
-      return this.channelsService.findVisible(req.user.sub._id);
+    return this.channelsService.findVisible(req.user.sub._id);
   }
 
   @Get(':id')
