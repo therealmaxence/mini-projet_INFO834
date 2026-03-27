@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { io } from "socket.io-client";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -48,6 +49,10 @@ export default function LoginPage() {
       document.cookie = `expires_in=${EXPIRES_IN}; path=/; expires=${expirationDate}; Secure; SameSite=Strict`;
 
       console.log("Login successful! Cookies set.");
+
+      io("http://localhost:3001", {
+        auth: { token: ACCESS_TOKEN },
+      });
       
       router.push("/home");
 

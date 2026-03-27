@@ -12,34 +12,29 @@ const io = new Server(server, {
     origin: "*",
     methods: ['GET', 'POST'],
   },
+  connectionStateRecovery: {
+    maxDisconnectionDuration: 60000, // 1 minute
+  },
 });
 
-app.get('/', (req, res) => {
-  res.send(`
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-      const socket = io();
-    </script>
-  `);
+
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  if (!token) return next(new Error('AUTH_REQUIRED'));
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    socket.user = decoded;
+    next();
+  } catch (err) {
+    next(new Error('Authentication error'));
+  }
 });
-
-// io.use((socket, next) => {
-//   const token = socket.handshake.auth.token;
-//   if (!token) return next(new Error('AUTH_REQUIRED'));
-
-//   try {
-//     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-//     socket.user = decoded;
-//     next();
-//   } catch (err) {
-//     next(new Error('Authentication error'));
-//   }
-// });
 
 
 io.on('connection', (socket) => {
-  console.log('connection');
-  // console.log(`[+] ${socket.user.username} connecté (${socket.id})`);
+  const username = socket.user?.sub?.username ||  'unknown-user';
+  console.log(`[+] ${username} connecté (${socket.id})`);
 
   socket.on('message', (msg) => {
     console.log(msg);
@@ -49,12 +44,12 @@ io.on('connection', (socket) => {
 
   socket.on('disconnecting', () => {
     console.log('disconnecting');
-    // console.log(`[~] ${socket.user.username} est entrain d'être déconnecté (${socket.id})`);
+    console.log(`[~] ${username} est entrain d'être déconnecté (${socket.id})`);
   });
 
   socket.on('disconnect', () => {
     console.log('disconnect');
-    // console.log(`[-] ${socket.user.username} déconnecté (${socket.id})`);
+    console.log(`[-] ${username} déconnecté (${socket.id})`);
   });
 });
 
