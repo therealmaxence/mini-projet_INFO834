@@ -1,12 +1,20 @@
 'use client';
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const API_URL = 'http://localhost:3002';
 
+interface Channel {
+  _id: string;
+  name: string;
+  owner: string;
+  members: string[];
+  visibility: string;
+}
+
 // Exemple de token JWT (généré pour l'utilisateur "john_doe")
-let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOnsiX2lkIjoiNjljNjdlZTI2MmJiMTM1YmQwY2MzM2QwIiwidXNlcm5hbWUiOiJqb2huX2RvZSIsInBhc3N3b3JkIjoiJDJiJDEwJEVJSTdJSUxHQnR4OENhLkE3RThFTC5IbW96aHRGY1hJTjdtZlFadC9MV2RObkhaR0RXaUtpIiwicm9sZSI6InVzZXIiLCJfX3YiOjB9LCJpYXQiOjE3NzQ2MjAzMDgsImV4cCI6MTc3NDYyMzkwOH0.31Ew309A5sH_RnGmiIq_1KHWaTHFeYcB3h2-8ZdCtRg"; 
+let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOnsiX2lkIjoiNjljNjdlZTI2MmJiMTM1YmQwY2MzM2QwIiwidXNlcm5hbWUiOiJqb2huX2RvZSIsInBhc3N3b3JkIjoiJDJiJDEwJEVJSTdJSUxHQnR4OENhLkE3RThFTC5IbW96aHRGY1hJTjdtZlFadC9MV2RObkhaR0RXaUtpIiwicm9sZSI6InVzZXIiLCJfX3YiOjB9LCJpYXQiOjE3NzQ2MjMyMzMsImV4cCI6MTc3NDYyNjgzM30.ikItRz88ofxqhOMpvQHD7TiZdP7g0Brr2JSCJNvZbwQ"; 
 
 export const getChannels = async (token: string) => {
   const response = await  fetch(`${API_URL}/channels`, {
@@ -25,21 +33,18 @@ export const getChannels = async (token: string) => {
 };
 
 
-
-// Dummy data
-const CHATS = [
-  { id: 1, name: "Alice Smith", lastMessage: "Are we still on for tomorrow?", time: "10:42 AM", unread: 2 },
-  { id: 2, name: "Bob Johnson", lastMessage: "Sent an attachment", time: "Yesterday", unread: 0 },
-  { id: 3, name: "Design Team", lastMessage: "The new mockups look great!", time: "Tuesday", unread: 5 },
-  { id: 4, name: "Mom", lastMessage: "Call me when you get home ❤️", time: "Monday", unread: 0 },
-];
-
 export default function HomePage() {
+  const [REAL_CHATS, setREAL_CHATS] = useState<Channel[]>([]);
   useEffect(() => {
     if (token) {
       getChannels(token)
         .then(channels => {
           console.log('Canaux récupérés :', channels);
+          setREAL_CHATS(channels);
+          console.log('name :', channels[0].name);
+          console.log('id :', channels[0]._id);
+          console.log('owner :', channels[0].owner);
+          console.log('members :', channels[0].members);
         })
         .catch(error => {
           console.error('Erreur :', error);
@@ -78,25 +83,25 @@ export default function HomePage() {
 
       {/* Chat List */}
       <div className="flex-1 overflow-y-auto">
-        {CHATS.map((chat) => (
+        {REAL_CHATS.map((chat) => (
           <Link
-            href={`/chat/${chat.id}`}
-            key={chat.id}
+            href={`/chat/${chat._id}`}
+            key={chat._id}
             className="flex items-center border-b border-gray-100 p-3 hover:bg-gray-50 transition-colors"
           >
             <div className="h-12 w-12 flex-shrink-0 rounded-full bg-gray-300"></div>
             <div className="ml-4 flex-1 overflow-hidden">
               <div className="flex items-baseline justify-between">
                 <h3 className="truncate text-base font-medium text-gray-900">{chat.name}</h3>
-                <span className="ml-2 flex-shrink-0 text-xs text-gray-500">{chat.time}</span>
+                {/* <span className="ml-2 flex-shrink-0 text-xs text-gray-500">{chat.time}</span> */}
               </div>
               <div className="flex items-center justify-between">
-                <p className="truncate text-sm text-gray-600">{chat.lastMessage}</p>
-                {chat.unread > 0 && (
+                {/* <p className="truncate text-sm text-gray-600">{chat.lastMessage}</p> */}
+                {/* {chat.unread > 0 && (
                   <span className="ml-2 flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-xs font-bold text-white">
                     {chat.unread}
                   </span>
-                )}
+                )} */}
               </div>
             </div>
           </Link>

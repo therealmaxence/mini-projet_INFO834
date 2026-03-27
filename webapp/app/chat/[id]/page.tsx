@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import {cookies} from "next/headers";
 
-// Dummy data
 const MESSAGES = [
   { id: 1, text: "Hey! How is the new app coming along?", time: "10:30 AM", isMe: false },
   { id: 2, text: "It's going really well! Just building the UI now.", time: "10:35 AM", isMe: true },
@@ -13,9 +13,39 @@ const MESSAGES = [
   { id: 5, text: "Yes, looking forward to it!", time: "10:45 AM", isMe: true },
 ];
 
+const API_URL = 'http://localhost:3002';
+
+interface Message {
+  _id: string;
+  owner: string;
+  channel: string;
+  type: string;
+  content: string;
+}
+
+let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOnsiX2lkIjoiNjljNjdlZTI2MmJiMTM1YmQwY2MzM2QwIiwidXNlcm5hbWUiOiJqb2huX2RvZSIsInBhc3N3b3JkIjoiJDJiJDEwJEVJSTdJSUxHQnR4OENhLkE3RThFTC5IbW96aHRGY1hJTjdtZlFadC9MV2RObkhaR0RXaUtpIiwicm9sZSI6InVzZXIiLCJfX3YiOjB9LCJpYXQiOjE3NzQ2Mjc2NzUsImV4cCI6MTc3NDYzMTI3NX0.WJzsIcrkyzSE1Dk4B8ueWgwqPUbHUyH4lmuFM7LB7Co"; 
+
+export const getMessages = async (token: string, chatId: string) => {
+  const response = await  fetch(`${API_URL}/messages/channel/${chatId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}` 
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Erreur lors de la récupération des messages');
+  }
+
+  return response.json();
+};
+
 export default function ChatRoomPage() {
+  // const cookieStore = cookies();
+  // const tokenFromCookie = cookieStore.get('access_token')?.value;
   const params = useParams();
-  const chatId = params.id; // You can use this to fetch the right chat from your DB
+  const chatId = Array.isArray(params.id) ? params.id[0] : params.id;
   const [messageInput, setMessageInput] = useState("");
 
   const handleSendMessage = (e: React.FormEvent) => {
@@ -24,6 +54,26 @@ export default function ChatRoomPage() {
     console.log(`Sending message to chat ${chatId}:`, messageInput);
     setMessageInput("");
   };
+
+  const [Messages, setMessages] = useState<Message[]>([]);
+    useEffect(() => {
+      if (token && chatId) {
+        getMessages(token, chatId)
+          .then(response => {
+            console.log('Messages récupérés :', response);
+            setMessages(response);
+            console.log('content :', response[0].content);
+            console.log('id :', response[0]._id);
+            console.log('owner :', response[0].owner);
+            console.log('type :', response[0].type);
+          })
+          .catch(error => {
+            console.error('Erreur :', error);
+          });
+      } else {
+        console.error('Aucun token disponible');
+      }
+    }, []);
 
   return (
     <div className="flex h-screen flex-col">
@@ -38,18 +88,18 @@ export default function ChatRoomPage() {
           <div className="h-10 w-10 rounded-full bg-gray-300"></div>
           <div className="ml-3">
             {/* In reality, fetch the name using the ID */}
-            <h2 className="text-base font-medium text-gray-900">Chat #{chatId}</h2>
+            <h2 className="text-base font-medium text-gray-900">Chat #{Messages[0]?.channel || chatId}</h2>
           </div>
         </div>
       </div>
 
       {/* Message Feed */}
       <div className="flex-1 overflow-y-auto bg-[#efeae2] p-4 space-y-4">
-        {MESSAGES.map((msg) => (
-          <div key={msg.id} className={`flex ${msg.isMe ? "justify-end" : "justify-start"}`}>
-            <div className={`relative max-w-[75%] rounded-lg px-4 py-2 shadow-sm ${msg.isMe ? "bg-[#d9fdd3] text-gray-900" : "bg-white text-gray-900"}`}>
-              <p className="text-sm">{msg.text}</p>
-              <span className="mt-1 block text-right text-[10px] text-gray-500">{msg.time}</span>
+        {Messages.map((msg) => (
+          <div key={msg._id} className={`flex ${msg.owner === "VOTRE_ID_USER" ? "justify-end" : "justify-start"}`}>
+            <div className={`relative max-w-[75%] rounded-lg px-4 py-2 shadow-sm ${msg.owner === "VOTRE_ID_USER" ? "bg-[#d9fdd3]" : "bg-white"}`}>
+              <p className="text-sm">{msg.content}</p>
+              <span className="mt-1 block text-right text-[10px] text-gray-500"></span>
             </div>
           </div>
         ))}
