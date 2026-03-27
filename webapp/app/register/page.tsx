@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { io } from "socket.io-client";
+import { connectSocket } from "@/lib/socket";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -52,9 +52,7 @@ export default function RegisterPage() {
 
       console.log("Registration successful! Cookies set.");
 
-      io("http://localhost:3001", {
-        auth: { token: ACCESS_TOKEN },
-      });
+      connectSocket(ACCESS_TOKEN);
       
       router.push("/home");
 
