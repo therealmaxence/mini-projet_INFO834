@@ -46,6 +46,23 @@ export class Message {
         size: number;
         originalName: string;
     };
+
+    @Prop({ type: Date, required: true, default: Date.now })
+    created: Date;
+
+    @Prop({ type: Date, required: true, default: Date.now })
+    updated: Date;
 }
 
 export const MessageSchema = SchemaFactory.createForClass(Message);
+
+MessageSchema.pre('findOneAndUpdate', async function () {
+  const update = this.getUpdate() as any;
+  update.updated = Date.now();
+  this.setUpdate(update);
+});
+
+MessageSchema.pre<mongoose.Query<any, Message>>(['find', 'findOne'], async function () {
+  this.populate('owner');
+  this.populate('channel');
+});
