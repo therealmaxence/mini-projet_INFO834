@@ -6,6 +6,7 @@ import { createWriteStream } from 'fs';
 import { unlink } from 'fs/promises';
 import { join } from 'path';
 import { Role } from '../profiles/schemas/profile.schema';
+import { Visibility } from '../channels/entities/channel.entity';
 import { Message, MessageDocument } from './entities/message.entity';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
@@ -51,6 +52,47 @@ export class MessagesService {
     return message;
   }
 
+  async findAllLastMessageChannelVisible(id: string, role: string = Role.USER) {
+    const profileId = new Types.ObjectId(id);
+
+    const visibilityMatch = role === 'admin' ? {} : {
+        $or: [
+            { 'channelData.owner': profileId },
+            { 'channelData.members': { $in: [profileId] } },
+            { 'channelData.visibility': Visibility.PUBLIC },
+        ],
+    };
+
+    return this.messageModel.aggregate([
+        {
+            $lookup: {
+                from: 'channels',
+                localField: 'channel',
+                foreignField: '_id',
+                as: 'channelData',
+            },
+        },
+        {
+            $unwind: '$channelData',
+        },
+        {
+            $match: visibilityMatch,
+        },
+        {
+            $sort: { created: -1 },
+        },
+        {
+            $group: {
+                _id: '$channel',
+                lastMessage: { $first: '$$ROOT' },
+            },
+        },
+        {
+            $replaceRoot: { newRoot: '$lastMessage' },
+        },
+    ]);
+  }
+
   async update(id: string, updateMessageDto: UpdateMessageDto) {
     const message = await this.messageModel
       .findByIdAndUpdate(id, updateMessageDto, { new: true })
@@ -65,7 +107,6 @@ export class MessagesService {
     if (message.type == MessageType.FILE) { await this.delete(message?.file?.url) }
     return message;
   }
-
 
   private upload(file?: Express.Multer.File) {
     return new Promise((resolve, reject) => {

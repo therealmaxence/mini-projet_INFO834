@@ -51,7 +51,7 @@ export class MessagesController {
     return this.messagesService.findBy({ channel: channel._id });
   }
 
-  @Get(':id')
+  @Get('search/:id')
   async findOne(@Param('id') id: string, @Request() req) {
     const message = await this.messagesService.findOne(id);
     const isVisible = this.channelsService.isVisible(message?.channel, req.user.sub);
@@ -59,6 +59,11 @@ export class MessagesController {
     if (!isVisible) { throw new UnauthorizedException("Message not visible") }
 
     return message;
+  }
+  
+  @Get('last')
+  async findAllLastMessageChannel(@Request() req) {
+    return this.messagesService.findAllLastMessageChannelVisible(req.user.sub._id, req.user.sub.role);
   }
 
   @Patch(':id')
