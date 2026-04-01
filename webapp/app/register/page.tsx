@@ -1,13 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { connectSocket } from "@/lib/socket";
+import { hasActiveSession } from "@/lib/auth";
 
 export default function RegisterPage() {
   const router = useRouter();
   const API_URL = "http://localhost:3002/";
+
+  useEffect(() => {
+    if (hasActiveSession()) {
+      router.replace("/home");
+    }
+  }, [router]);
   
   // State for form fields and UI feedback
   const [username, setUsername] = useState("");
