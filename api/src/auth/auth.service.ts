@@ -33,6 +33,17 @@ export class AuthService {
         return this.token(profile);
     }
 
+    async untokenize(token :string) {
+        try {
+            const payload = await this.jwtService.verifyAsync(token, {
+                secret: jwtConstants.secret
+            });
+            return payload.sub as Profile;
+        } catch {
+            throw new UnauthorizedException(`Token invalide ou expiré`);
+        }
+    }
+
     async token(profile: Profile) {
         const payload = { sub: profile };
         const expiresIn = jwtConstants.signOptions.expiresIn;

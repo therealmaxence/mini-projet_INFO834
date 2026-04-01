@@ -27,6 +27,23 @@ export class Channel {
 
     @Prop({ enum: Visibility, default: Visibility.PRIVATE, required: true })
     visibility: Visibility;
+
+    @Prop({ type: Date, required: true, default: Date.now })
+    created: Date;
+
+    @Prop({ type: Date, required: true, default: Date.now })
+    updated: Date;
 }
 
 export const ChannelSchema = SchemaFactory.createForClass(Channel);
+
+ChannelSchema.pre('findOneAndUpdate', async function () {
+  const update = this.getUpdate() as any;
+  update.updated = Date.now();
+  this.setUpdate(update);
+});
+
+ChannelSchema.pre<mongoose.Query<any, Channel>>(['find', 'findOne'], async function () {
+  this.populate('owner');
+  this.populate('members');
+});

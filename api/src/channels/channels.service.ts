@@ -60,7 +60,7 @@ export class ChannelsService {
     return channel;
   }
 
-  isVisible(channel: Channel, user) : boolean {
+  isVisible(channel, user) : boolean {
       const userId = new Types.ObjectId(user._id);
       const hasAutority = this.hasAutority(channel, user)
       const isMember = channel.members.some((m) => m.equals(userId));
@@ -68,7 +68,7 @@ export class ChannelsService {
       return hasAutority || isMember;
     }
   
-  hasAutority(channel: Channel, user) : boolean {
+  hasAutority(channel, user) : boolean {
     const userId = new Types.ObjectId(user._id);
     const isOwner = channel.owner.equals(userId);
     const isAdmin = user.role === Role.ADMIN;
