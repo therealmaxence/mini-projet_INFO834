@@ -1,15 +1,65 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const handleSubmit = (e: React.FormEvent) => {
+  const router = useRouter();
+  const API_URL = "http://localhost:3002/";
+  
+  // State for form fields and UI feedback
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Add your login logic here (e.g., Supabase, Firebase, NextAuth)
-    console.log("Logging user in...");
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch(`${API_URL}auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to login. Please check your credentials.");
+      }
+
+      // Map to the exact keys returned by your NestJS backend
+      const ACCESS_TOKEN = data.access_token; 
+      const EXPIRES_IN = data.expiresIn;
+
+      // 1. Convert the Unix timestamp (in seconds) to a standard UTC Date string
+      const expirationDate = new Date(EXPIRES_IN * 1000).toUTCString();
+
+      // 2. Set the access token cookie
+      document.cookie = `access_token=${ACCESS_TOKEN}; path=/; expires=${expirationDate}; Secure; SameSite=Strict`;
+      
+      // 3. Set the expiration date cookie (as requested)
+      document.cookie = `expires_in=${EXPIRES_IN}; path=/; expires=${expirationDate}; Secure; SameSite=Strict`;
+
+      console.log("Login successful! Cookies set.");
+      
+      router.push("/home");
+
+    } catch (err: any) {
+      console.error("Login error:", err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  return (
+return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8 rounded-2xl bg-white p-8 shadow-xl ring-1 ring-gray-900/5">
         
@@ -31,21 +81,31 @@ export default function LoginPage() {
 
         {/* Form */}
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          
+          {/* Error Message Display */}
+          {error && (
+            <div className="rounded-md bg-red-50 p-4">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+
           <div className="space-y-4">
-            
-            {/* Email Field */}
+            {/* Username Field */}
             <div>
-              <label htmlFor="email-address" className="block text-sm font-medium text-gray-700">
-                Email address
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                Username
               </label>
               <input
-                id="email-address"
-                name="email"
-                type="email"
-                autoComplete="email"
+                id="username"
+                name="username"
+                type="text"
+                autoComplete="username"
                 required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black sm:text-sm transition-colors"
-                placeholder="you@example.com"
+                placeholder="Username"
+                disabled={isLoading}
               />
             </div>
 
@@ -67,8 +127,11 @@ export default function LoginPage() {
                 type="password"
                 autoComplete="current-password"
                 required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black sm:text-sm transition-colors"
                 placeholder="••••••••"
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -77,34 +140,14 @@ export default function LoginPage() {
           <div>
             <button
               type="submit"
-              className="flex w-full justify-center rounded-lg bg-black px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 transition-colors"
+              disabled={isLoading}
+              className="flex w-full justify-center rounded-lg bg-black px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              Sign in
+              {isLoading ? "Signing in..." : "Sign in"}
             </button>
           </div>
         </form>
-
-        {/* Social Login Divider */}
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="bg-white px-2 text-gray-500">Or continue with</span>
-            </div>
-          </div>
-
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <button className="flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none transition-colors">
-              Google
-            </button>
-            <button className="flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none transition-colors">
-              GitHub
-            </button>
-          </div>
-        </div>
-
+        
       </div>
     </div>
   );
