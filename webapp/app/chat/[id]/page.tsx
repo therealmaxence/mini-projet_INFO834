@@ -54,8 +54,6 @@ export const getUserConnected = async () => {
   return response.json();
 };
 
-const user = getUserConnected();
-
 export const postMessage = async (token: string, chatId: string, content: string) => {
   const response = await fetch(`${API_URL}/messages`, {
     method: 'POST',
@@ -98,6 +96,22 @@ export default function ChatRoomPage() {
   const [messageInput, setMessageInput] = useState("");
   const [chanelName, setChanelName] = useState("");
   const [Messages, setMessages] = useState<Message[]>([]);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (token) {
+        try {
+          const userData = await getUserConnected();
+          setUser(userData);
+        } catch (error) {
+          console.error('Erreur lors de la récupération du user :', error);
+        }
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   useEffect(() => {
     const fetchChannelName = async () => {
@@ -134,11 +148,7 @@ export default function ChatRoomPage() {
       if (token && chatId) {
         getMessages(token, chatId)
           .then(response => {
-            console.log('Messages récupérés :', response);
             setMessages(response);
-            console.log('id :', response[0]._id);
-            console.log('owner :', response[0].owner);
-            console.log('type :', response[0].type);
           })
           .catch(error => {
             console.error('Erreur :', error);
@@ -168,14 +178,17 @@ export default function ChatRoomPage() {
 
       {/* Message Feed */}
       <div className="flex-1 overflow-y-auto bg-[#efeae2] p-4 space-y-4">
-        {Messages.map((msg) => (
-          <div key={msg._id} className={`flex ${msg.owner._id === user._id ? "justify-end" : "justify-start"}`}>
-            <div className={`relative max-w-[75%] rounded-lg px-4 py-2 shadow-sm ${msg.owner._id === user._id ? "bg-[#d9fdd3]" : "bg-white"}`}>
-              <p className="text-sm">{msg.content}</p>
-              <span className="mt-1 block text-right text-[10px] text-gray-500"></span>
+        {user && Messages.map((msg) => {
+          const owner_id = msg.owner._id;
+          return (
+            <div key={msg._id} className={`flex ${owner_id === user._id ? "justify-end" : "justify-start"}`}>
+              <div className={`relative max-w-[75%] rounded-lg px-4 py-2 shadow-sm ${owner_id === user._id ? "bg-[#d9fdd3]" : "bg-white"}`}>
+                <p className="text-sm">{msg.content}</p>
+                <span className="mt-1 block text-right text-[10px] text-gray-500"></span>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Input Area */}
