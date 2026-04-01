@@ -66,3 +66,31 @@ MessageSchema.pre<mongoose.Query<any, Message>>(['find', 'findOne'], async funct
   this.populate('owner');
   this.populate('channel');
 });
+
+MessageSchema.pre<mongoose.Aggregate<any>>('aggregate', function () {
+  this.pipeline().push(
+    {
+      $lookup: {
+        from: 'profiles', // ou le nom de ta collection owner
+        localField: 'owner',
+        foreignField: '_id',
+        as: 'owner',
+      },
+    },
+    { $unwind: { path: '$owner', preserveNullAndEmptyArrays: true } },
+    {
+      $project: {
+        'owner.password': 0,
+      },
+    },
+    {
+      $lookup: {
+        from: 'channels',
+        localField: 'channel',
+        foreignField: '_id',
+        as: 'channel',
+      },
+    },
+    { $unwind: { path: '$channel', preserveNullAndEmptyArrays: true } }
+  );
+});
