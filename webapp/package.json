@@ -9,11 +9,15 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@giphy/js-fetch-api": "^5.7.0",
+    "@giphy/react-components": "^10.1.1",
+    "add": "^2.0.6",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "socket.io": "^4.8.3",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.3",
+    "yarn": "^1.22.22"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
