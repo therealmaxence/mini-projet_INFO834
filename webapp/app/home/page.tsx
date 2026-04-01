@@ -12,9 +12,24 @@ interface Channel {
   members: string[];
   visibility: string;
 }
+let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOnsiX2lkIjoiNjljNjdlZTI2MmJiMTM1YmQwY2MzM2QwIiwidXNlcm5hbWUiOiJqb2huX2RvZSIsInBhc3N3b3JkIjoiJDJiJDEwJEVJSTdJSUxHQnR4OENhLkE3RThFTC5IbW96aHRGY1hJTjdtZlFadC9MV2RObkhaR0RXaUtpIiwicm9sZSI6InVzZXIiLCJfX3YiOjB9LCJpYXQiOjE3NzQ2MzE0MzMsImV4cCI6MTc3NDYzNDkzM30.8K8K5q7v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v4v４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ４ｖ５ｕｐｌｏａｄｅｄＸｌｏｃａｌＦｉｌｅｓ" 
 
-// Exemple de token JWT (généré pour l'utilisateur "john_doe")
-let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOnsiX2lkIjoiNjljNjdlZTI2MmJiMTM1YmQwY2MzM2QwIiwidXNlcm5hbWUiOiJqb2huX2RvZSIsInBhc3N3b3JkIjoiJDJiJDEwJEVJSTdJSUxHQnR4OENhLkE3RThFTC5IbW96aHRGY1hJTjdtZlFadC9MV2RObkhaR0RXaUtpIiwicm9sZSI6InVzZXIiLCJfX3YiOjB9LCJpYXQiOjE3NzQ2MjMyMzMsImV4cCI6MTc3NDYyNjgzM30.ikItRz88ofxqhOMpvQHD7TiZdP7g0Brr2JSCJNvZbwQ"; 
+export const getUserConnected = async () => {
+  const response = await  fetch(`${API_URL}/auth/me`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}` 
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Erreur lors de la récupération des canaux');
+  }
+
+  return response.json();
+};
+
 
 export const getChannels = async (token: string) => {
   const response = await  fetch(`${API_URL}/channels`, {
