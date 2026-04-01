@@ -33,13 +33,12 @@ io.use((socket, next) => {
 
 
 io.on('connection', (socket) => {
-  const username = socket.user?.sub?.username ||  'unknown-user';
+  const username = socket.user?.sub?.username || 'unknown-user';
   console.log(`[+] ${username} connecté (${socket.id})`);
 
   socket.on('message', (msg) => {
     console.log(msg);
-    // console.log(`[MSG] ${socket.user.username}: ${msg}`);
-    // io.emit('message', { user: socket.user.username, text: msg });
+    console.log(`[MSG] ${username}: ${msg.content}`);
   });
 
   socket.on('disconnecting', () => {

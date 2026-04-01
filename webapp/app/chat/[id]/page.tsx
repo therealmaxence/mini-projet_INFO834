@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { getSocket } from "@/lib/socket";
 
 const API_URL = 'http://localhost:3002';
 
@@ -21,6 +22,8 @@ const getCookieValue = (name : string) => {
 };
 
 const token = getCookieValue('access_token');
+
+const socket = getSocket();
 
 export const getMessages = async (token: string, chatId: string) => {
   const response = await  fetch(`${API_URL}/messages/channel/${chatId}`, {
@@ -69,11 +72,16 @@ export const postMessage = async (token: string, chatId: string, content: string
     })
   });
 
-  if (!response.ok) {
+  if (response.ok) {
+    const data: Message = await response.json();
+    
+    socket.emit('message', { channel: chatId, id: data._id });
+
+    return data;
+  }
+  else {
     throw new Error('Erreur lors de l\'envoi du message');
   }
-
-  return response.json();
 };
 
 
