@@ -3,3 +3,8 @@
 - Maxence : Crétion du frontend pour les pages de login et register ainsi que connexion à l'API.
 - Corentin : Connexion Api page conv page messages
 - Lucas : Finition de l'API (ajout des date [created, updated], boucle des objets, ajout de route utile)
+
+## 01/04/2026 :
+  - *Maxence* : Finalisation de la conexion avec l'API pour les pages de login et register.
+Connexion à un endpoint API GIPHY, afin d'envoyer des gifs à term (pas encore opérationnel).
+Cfréation d'une page profile afin de modfifer ses informations personnelles (usernerme et password) + connexion API.
