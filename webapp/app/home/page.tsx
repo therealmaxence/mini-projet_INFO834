@@ -12,7 +12,14 @@ interface Channel {
   members: string[];
   visibility: string;
 }
-let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOnsiX2lkIjoiNjljNjdlZTI2MmJiMTM1YmQwY2MzM2QwIiwidXNlcm5hbWUiOiJqb2huX2RvZSIsInBhc3N3b3JkIjoiJDJiJDEwJEVJSTdJSUxHQnR4OENhLkE3RThFTC5IbW96aHRGY1hJTjdtZlFadC9MV2RObkhaR0RXaUtpIiwicm9sZSI6InVzZXIiLCJfX3YiOjAsImNyZWF0ZWQiOiIyMDI2LTA0LTAxVDA2OjQ2OjExLjcyMFoiLCJ1cGRhdGVkIjoiMjAyNi0wNC0wMVQwNjo0NjoxMS43MjdaIn0sImlhdCI6MTc3NTAyNTk3MSwiZXhwIjoxNzc1MDQwMzcxfQ.5vZoyN8WWb46JZINPnv0QtJLi-nbD9Tw6hiC3ZkmAJE" 
+
+const cookieString = document.cookie;
+const getCookieValue = (name : string) => {
+  const row = cookieString.split('; ').find(row => row.startsWith(`${name}=`));
+  return row ? row.split('=')[1] : null;
+};
+
+const token = getCookieValue('access_token');
 
 export const getUserConnected = async () => {
   const response = await  fetch(`${API_URL}/auth/me`, {
@@ -24,7 +31,7 @@ export const getUserConnected = async () => {
   });
 
   if (!response.ok) {
-    throw new Error('Erreur lors de la récupération des canaux');
+    throw new Error('Erreur lors de la récupération du user');
   }
 
   return response.json();
@@ -54,12 +61,7 @@ export default function HomePage() {
     if (token) {
       getChannels(token)
         .then(channels => {
-          console.log('Canaux récupérés :', channels);
           setREAL_CHATS(channels);
-          console.log('name :', channels[0].name);
-          console.log('id :', channels[0]._id);
-          console.log('owner :', channels[0].owner);
-          console.log('members :', channels[0].members);
         })
         .catch(error => {
           console.error('Erreur :', error);
