@@ -36,9 +36,25 @@ io.on('connection', (socket) => {
   const username = socket.user?.sub?.username || 'unknown-user';
   console.log(`[+] ${username} connecté (${socket.id})`);
 
+  socket.on('join_channel', ({ channelId }) => {
+    if (!channelId) return;
+    const roomName = `channel:${channelId}`;
+    socket.join(roomName);
+    console.log(`[ROOM] ${username} rejoint ${roomName}`);
+  });
+
+  socket.on('leave_channel', ({ channelId }) => {
+    if (!channelId) return;
+    const roomName = `channel:${channelId}`;
+    socket.leave(roomName);
+    console.log(`[ROOM] ${username} quitte ${roomName}`);
+  });
+
   socket.on('message', (msg) => {
-    console.log(msg);
-    console.log(`[MSG] ${username}: ${msg.content}`);
+    if (!msg?.channel) return;
+    const roomName = `channel:${msg.channel}`;
+    io.to(roomName).emit('message', msg);
+    console.log(`[MSG] ${username} -> ${roomName}`);
   });
 
   socket.on('disconnecting', () => {
