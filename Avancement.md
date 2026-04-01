@@ -9,3 +9,4 @@
 Connexion à un endpoint API GIPHY, afin d'envoyer des gifs à term (pas encore opérationnel).
 Cfréation d'une page profile afin de modfifer ses informations personnelles (usernerme et password) + connexion API.
  - *Corentin* : Création de formulaire d'ajout de chanels et envoie de messages (connexion front/api)
+ - *Louis* : Gestion des channels sur le socket et envoi de messages en temps réél
