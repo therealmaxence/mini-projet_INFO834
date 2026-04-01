@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Res, Request, UseGuards, UnauthorizedException, NotFoundException, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
-import { AuthGuard, RolesGuard, Roles } from '../auth/auth.guard';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { AuthGuard, RolesGuard } from '../auth/auth.guard';
 import { memoryStorage } from 'multer';
 import { MessageType } from './entities/message.entity';
 import { MessagesService } from './messages.service';
@@ -51,15 +51,19 @@ export class MessagesController {
     return this.messagesService.findBy({ channel: channel._id });
   }
 
-  @Get(':id')
+  @Get('search/:id')
   async findOne(@Param('id') id: string, @Request() req) {
     const message = await this.messagesService.findOne(id);
-    const channel = await this.channelsService.findOne(message?.channel.toString());
-    const isVisible = this.channelsService.isVisible(channel, req.user.sub);
+    const isVisible = this.channelsService.isVisible(message?.channel, req.user.sub);
 
     if (!isVisible) { throw new UnauthorizedException("Message not visible") }
 
     return message;
+  }
+  
+  @Get('last')
+  async findAllLastMessageChannel(@Request() req) {
+    return this.messagesService.findAllLastMessageChannelVisible(req.user.sub._id, req.user.sub.role);
   }
 
   @Patch(':id')
@@ -89,8 +93,7 @@ export class MessagesController {
     @Request() req
   ) {
     const message = await this.messagesService.findOne(id);
-    const channel = await this.channelsService.findOne(message?.channel.toString());
-    const isVisible = this.channelsService.isVisible(channel, req.user.sub);
+    const isVisible = this.channelsService.isVisible(message?.channel, req.user.sub);
 
     if (!isVisible) { throw new UnauthorizedException("Message not visible") }
     if (message?.type != MessageType.FILE) { throw new NotFoundException('Not found file or not a file')}

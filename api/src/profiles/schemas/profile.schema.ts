@@ -19,6 +19,12 @@ export class Profile {
 
     @Prop({ required: true, enum: Role, default: Role.USER })
     role: Role;
+
+    @Prop({ type: Date, required: true, default: Date.now })
+    created: Date;
+
+    @Prop({ type: Date, required: true, default: Date.now })
+    updated: Date;
 }
 
 export const ProfileSchema = SchemaFactory.createForClass(Profile);
@@ -32,6 +38,7 @@ ProfileSchema.pre('save', async function () {
 
 ProfileSchema.pre('findOneAndUpdate', async function () {
   const update = this.getUpdate() as any;
+  update.updated = Date.now();
   if (update?.role) { update.role = Role.USER }
   if (update?.password) {
     update.password = await bcrypt.hash(update.password, 10);

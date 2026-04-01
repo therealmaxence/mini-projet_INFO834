@@ -34,7 +34,7 @@ export class ChannelsController {
     if (!isVisible) {
       throw new UnauthorizedException('Not allowed to access this channel')
     }
-    return this.channelsService.findOne(id);
+    return channel;
   }
 
   @Patch(':id')
