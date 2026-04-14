@@ -67,6 +67,12 @@ MessageSchema.pre<mongoose.Query<any, Message>>(['find', 'findOne'], async funct
   this.populate('channel');
 });
 
+MessageSchema.post('save', async function (doc, next) {
+  await doc.populate('owner');
+  await doc.populate('channel');
+  next();
+});
+
 MessageSchema.pre<mongoose.Aggregate<any>>('aggregate', function () {
   this.pipeline().push(
     {
