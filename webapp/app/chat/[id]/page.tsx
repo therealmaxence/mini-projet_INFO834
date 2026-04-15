@@ -129,6 +129,8 @@ export default function ChatRoomPage() {
   }, [token, chatId]);
 
 
+  const canSend = messageInput.trim().length > 0;
+  
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -160,7 +162,7 @@ export default function ChatRoomPage() {
 
   return (
     <div className="flex h-screen flex-col">
-      
+
       {/* Header */}
       <div className="flex h-16 items-center border-b border-gray-200 bg-gray-50 px-4 py-3">
         <Link href="/home" className="mr-4 text-gray-500 hover:text-gray-900">
@@ -192,8 +194,11 @@ export default function ChatRoomPage() {
       </div>
 
       {/* Input Area */}
-      <div className="flex items-center bg-gray-50 px-4 py-3">
-        <form onSubmit={handleSendMessage} className="flex-1 flex items-center">
+      <div className="flex items-center bg-gray-50 px-4 py-3 gap-2">       
+
+        <form onSubmit={handleSendMessage} className="flex-1 flex items-center gap-2">
+
+          {/* Text input */}
           <input
             type="text"
             value={messageInput}
@@ -201,14 +206,18 @@ export default function ChatRoomPage() {
             placeholder="Type a message"
             className="w-full rounded-full border-none bg-white px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-300 shadow-sm"
           />
-          <button 
-            type="submit" 
-            disabled={!messageInput.trim()}
-            className="ml-4 flex h-10 w-10 items-center justify-center rounded-full bg-black text-white disabled:bg-gray-300 disabled:text-gray-500 transition-colors"
+
+          {/* Send button */}
+          <button
+            type="submit"
+            disabled={!canSend}
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-black text-white disabled:bg-gray-300 disabled:text-gray-500 transition-colors"
           >
-            {/* Send Icon */}
-            <svg className="h-5 w-5 translate-x-[-1px] translate-y-[1px]" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
+            <svg className="h-5 w-5 translate-x-[-1px] translate-y-[1px]" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+            </svg>
           </button>
+
         </form>
       </div>
 
