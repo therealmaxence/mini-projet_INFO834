@@ -51,7 +51,17 @@ export default function LoginPage() {
 
       console.log("Login successful! Cookies set.");
 
-      connectSocket(ACCESS_TOKEN);
+      const socket = connectSocket(ACCESS_TOKEN);
+
+      await new Promise<void>((resolve) => {
+        socket.emit("presence:login", (response: { error?: string }) => {
+          if (response?.error) {
+            console.error("Presence login update failed:", response.error);
+          }
+
+          resolve();
+        });
+      });
       
       router.push("/home");
 

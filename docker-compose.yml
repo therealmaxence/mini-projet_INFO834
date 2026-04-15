@@ -34,6 +34,7 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
+      - REDIS_URL=redis://redis:6379
     env_file:
       - .env.local
     depends_on:

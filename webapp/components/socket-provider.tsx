@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { connectSocket, disconnectSocket } from "@/lib/socket";
+import { connectSocket, disconnectSocket, getSocket } from "@/lib/socket";
 import { getCookie } from "@/lib/cookies";
 
 type SocketStatus = "disconnected" | "connecting" | "connected" | "error";
@@ -16,11 +16,13 @@ type SocketStatus = "disconnected" | "connecting" | "connected" | "error";
 type SocketStatusContextValue = {
   status: SocketStatus;
   lastError: string | null;
+  connectedUsers: number;
 };
 
 const SocketStatusContext = createContext<SocketStatusContextValue>({
   status: "disconnected",
   lastError: null,
+  connectedUsers: 0,
 });
 
 export function useSocketStatus(): SocketStatusContextValue {
@@ -30,18 +32,12 @@ export function useSocketStatus(): SocketStatusContextValue {
 export default function SocketProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<SocketStatus>("disconnected");
   const [lastError, setLastError] = useState<string | null>(null);
+  const [connectedUsers, setConnectedUsers] = useState(0);
 
   useEffect(() => {
+    const socket = getSocket();
     const token = getCookie("access_token");
 
-    if (!token) {
-      setStatus("disconnected");
-      return;
-    }
-
-    setStatus("connecting");
-    const socket = connectSocket(token);
-    
     const onConnect = () => {
       setStatus("connected");
       setLastError(null);
@@ -49,6 +45,10 @@ export default function SocketProvider({ children }: { children: ReactNode }) {
 
     const onDisconnect = () => {
       setStatus("disconnected");
+    };
+
+    const onPresenceCount = (count: number) => {
+      setConnectedUsers(Number(count) || 0);
     };
 
     const onConnectError = (err: Error) => {
@@ -60,6 +60,14 @@ export default function SocketProvider({ children }: { children: ReactNode }) {
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("connect_error", onConnectError);
+    socket.on("presence_count", onPresenceCount);
+
+    if (token) {
+      setStatus("connecting");
+      connectSocket(token);
+    } else if (socket.connected) {
+      disconnectSocket();
+    }
 
     if (socket.connected) {
       onConnect();
@@ -69,13 +77,14 @@ export default function SocketProvider({ children }: { children: ReactNode }) {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
       socket.off("connect_error", onConnectError);
+      socket.off("presence_count", onPresenceCount);
       disconnectSocket();
     };
   }, []);
 
   const value = useMemo(
-    () => ({ status, lastError }),
-    [status, lastError],
+    () => ({ status, lastError, connectedUsers }),
+    [status, lastError, connectedUsers],
   );
 
   const badgeColorClass =
@@ -95,7 +104,7 @@ export default function SocketProvider({ children }: { children: ReactNode }) {
           className={`rounded-full px-3 py-1 text-xs font-semibold shadow-sm ${badgeColorClass}`}
           title={lastError ?? undefined}
         >
-          Socket: {status}
+          Socket: {status} · {connectedUsers} en ligne
         </div>
       </div>
     </SocketStatusContext.Provider>

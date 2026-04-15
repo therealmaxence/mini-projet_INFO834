@@ -2,16 +2,23 @@ import { io, type Socket } from "socket.io-client";
 
 let socket: Socket | null = null;
 
+export const SOCKET_PORT = 3001;
+
+export function getSocketUrl(): string {
+  if (typeof window !== "undefined") {
+    return `http://${window.location.hostname}:${SOCKET_PORT}`;
+  }
+
+  return `http://localhost:${SOCKET_PORT}`;
+}
+
 export function getSocket(): Socket {
   if (typeof window === "undefined") {
     throw new Error("Socket can only be initialized in the browser");
   }
 
-  const hostname = window.location.hostname;
-  const SOCKET_URL = `http://${hostname}:3001`;
-
   if (!socket) {
-    socket = io(SOCKET_URL, {
+    socket = io(getSocketUrl(), {
       autoConnect: false,
       reconnection: true,
     });

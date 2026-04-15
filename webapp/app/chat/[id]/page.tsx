@@ -96,6 +96,7 @@ export default function ChatRoomPage() {
   const [messageInput, setMessageInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [Messages, setMessages] = useState<Message[]>([]);
+  const [channelUsers, setChannelUsers] = useState(0);
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -108,7 +109,24 @@ export default function ChatRoomPage() {
     if (!chatId) return;
     const socket = getSocket();
 
-    socket.emit("join_channel", { channelId: chatId });
+    const onChannelUsers = (payload: { channelId: string; count: number }) => {
+      if (payload.channelId === chatId) {
+        setChannelUsers(payload.count);
+      }
+    };
+
+    socket.on("channel_presence_count", onChannelUsers);
+
+    socket.emit("join_channel", { channelId: chatId }, (response: { count?: number; error?: string }) => {
+      if (response?.error) {
+        console.error("Erreur lors de la récupération du compteur de channel :", response.error);
+        return;
+      }
+
+      if (typeof response?.count === "number") {
+        setChannelUsers(response.count);
+      }
+    });
 
     const onMessage = (msg: Message) => {
       if (msg.channel === chatId) {
@@ -126,6 +144,7 @@ export default function ChatRoomPage() {
     socket.on("message", onMessage);
     return () => {
       socket.off("message", onMessage);
+      socket.off("channel_presence_count", onChannelUsers);
       socket.emit("leave_channel", { channelId: chatId });
     };
   }, [chatId]);
@@ -226,6 +245,7 @@ export default function ChatRoomPage() {
           <div className="ml-3">
             {/* In reality, fetch the name using the ID */}
             <h2 className="text-base font-medium text-gray-900">{chanelName || chatId}</h2>
+            <p className="text-xs text-gray-500">{channelUsers} utilisateur(s) connecté(s)</p>
           </div>
         </div>
       </div>
