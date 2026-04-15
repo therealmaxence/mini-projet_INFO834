@@ -5,10 +5,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { connectSocket } from "@/lib/socket";
 import { hasActiveSession } from "@/lib/auth";
+import { API_URL } from "@/lib/api";
+import { setAuthCookies } from "@/lib/cookies";
 
 export default function LoginPage() {
   const router = useRouter();
-  const API_URL = "http://localhost:3002/";
 
   useEffect(() => {
     if (hasActiveSession()) {
@@ -28,7 +29,7 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const response = await fetch(`${API_URL}auth/login`, {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -46,14 +47,7 @@ export default function LoginPage() {
       const ACCESS_TOKEN = data.access_token; 
       const EXPIRES_IN = data.expiresIn;
 
-      // 1. Convert the Unix timestamp (in seconds) to a standard UTC Date string
-      const expirationDate = new Date(EXPIRES_IN * 1000).toUTCString();
-
-      // 2. Set the access token cookie
-      document.cookie = `access_token=${ACCESS_TOKEN}; path=/; expires=${expirationDate}; Secure; SameSite=Strict`;
-      
-      // 3. Set the expiration date cookie (as requested)
-      document.cookie = `expires_in=${EXPIRES_IN}; path=/; expires=${expirationDate}; Secure; SameSite=Strict`;
+      setAuthCookies(ACCESS_TOKEN, EXPIRES_IN);
 
       console.log("Login successful! Cookies set.");
 

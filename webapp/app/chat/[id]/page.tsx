@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { getSocket } from "@/lib/socket";
+import { API_URL } from "@/lib/api";
+import { getAccessToken } from "@/lib/cookies";
 
-const API_URL = 'http://localhost:3002';
 
 interface Message {
   _id: string;
@@ -15,22 +16,12 @@ interface Message {
   content: string;
 }
 
-const cookieString=document.cookie;
-const getCookieValue = (name : string) => {
-  const row = cookieString.split('; ').find(row => row.startsWith(`${name}=`));
-  return row ? row.split('=')[1] : null;
-};
-
-const token = getCookieValue('access_token');
-
-const socket = getSocket();
-
-export const getMessages = async (token: string, chatId: string) => {
+export const getMessages = async (authToken: string, chatId: string) => {
   const response = await  fetch(`${API_URL}/messages/channel/${chatId}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
+      'Authorization': `Bearer ${authToken}`
     },
   });
 
@@ -42,6 +33,12 @@ export const getMessages = async (token: string, chatId: string) => {
 };
 
 export const getUserConnected = async () => {
+  const token = getAccessToken();
+
+  if (!token) {
+    throw new Error('Aucun token disponible');
+  }
+
   const response = await  fetch(`${API_URL}/auth/me`, {
     method: 'GET',
     headers: {
@@ -70,30 +67,19 @@ export const postMessage = async (token: string, chatId: string, content: string
     })
   });
 
-  if (response.ok) {
-    const data: Message = await response.json();
-
-    socket.emit('message', {
-      _id: data._id,
-      owner: data.owner,
-      channel: chatId,
-      type: data.type,
-      content: data.content
-    });
-
-    return data;
-  }
-  else {
+  if (!response.ok) {
     throw new Error('Erreur lors de l\'envoi du message');
   }
+
+  return response.json();
 };
 
-export const getChanelName = async (token: string, chatId: string) => {
+export const getChanelName = async (authToken: string, chatId: string) => {
   const response = await fetch(`${API_URL}/channels/${chatId}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
+      'Authorization': `Bearer ${authToken}`
     },
   });
 
@@ -120,6 +106,7 @@ export default function ChatRoomPage() {
   // Socket setup for real-time messages
   useEffect(() => {
     if (!chatId) return;
+    const socket = getSocket();
 
     socket.emit("join_channel", { channelId: chatId });
 
@@ -127,6 +114,8 @@ export default function ChatRoomPage() {
       if (msg.channel === chatId) {
         if (msg.type === "text") {
           setMessages((prev: Message[]) => [...prev, msg]);
+          let audio = new Audio('/whatsapp.mp3');
+          audio.play();
         } else {
           // ToDo : fetch message content with id
         }
@@ -143,6 +132,8 @@ export default function ChatRoomPage() {
 
   const [user, setUser] = useState<any>(null);
   useEffect(() => {
+    const token = getAccessToken();
+
     const fetchUser = async () => {
       if (token) {
         try {
@@ -158,6 +149,8 @@ export default function ChatRoomPage() {
 
   const [chanelName, setChanelName] = useState("");
   useEffect(() => {
+    const token = getAccessToken();
+
     const fetchChannelName = async () => {
       if (token && chatId) {
         try {
@@ -169,17 +162,27 @@ export default function ChatRoomPage() {
       }
     };
     fetchChannelName();
-  }, [token, chatId]);
+  }, [chatId]);
 
   const canSend = messageInput.trim().length > 0;
   
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
+    const token = getAccessToken();
 
     if (!messageInput.trim() || !chatId || !token) return;
 
     try {
-      await postMessage(token, chatId, messageInput);
+      const data = await postMessage(token, chatId, messageInput);
+      const socket = getSocket();
+
+      socket.emit('message', {
+        _id: data._id,
+        owner: data.owner,
+        channel: chatId,
+        type: data.type,
+        content: data.content
+      });
 
       setMessageInput("");
     } catch (error) {
@@ -189,6 +192,8 @@ export default function ChatRoomPage() {
   };
 
   useEffect(() => {
+    const token = getAccessToken();
+
     if (token && chatId) {
       getMessages(token, chatId)
         .then(response => {

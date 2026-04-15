@@ -5,10 +5,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { connectSocket } from "@/lib/socket";
 import { hasActiveSession } from "@/lib/auth";
+import { API_URL } from "@/lib/api";
+import { setAuthCookies } from "@/lib/cookies";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const API_URL = "http://localhost:3002/";
 
   useEffect(() => {
     if (hasActiveSession()) {
@@ -35,7 +36,7 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}auth/register`, {
+      const response = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -52,10 +53,7 @@ export default function RegisterPage() {
       const ACCESS_TOKEN = data.access_token; 
       const EXPIRES_IN = data.expiresIn;
 
-      const expirationDate = new Date(EXPIRES_IN * 1000).toUTCString();
-
-      document.cookie = `access_token=${ACCESS_TOKEN}; path=/; expires=${expirationDate}; Secure; SameSite=Strict`;
-      document.cookie = `expires_in=${EXPIRES_IN}; path=/; expires=${expirationDate}; Secure; SameSite=Strict`;
+      setAuthCookies(ACCESS_TOKEN, EXPIRES_IN);
 
       console.log("Registration successful! Cookies set.");
 

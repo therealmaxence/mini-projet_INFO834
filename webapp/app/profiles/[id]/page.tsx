@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
+import { API_URL } from "@/lib/api";
+import { getCookie } from "@/lib/cookies";
 
 
 // ── Generative avatar algorithm
@@ -72,21 +74,9 @@ function svgToDataUrl(svg: string) {
   return `data:image/svg+xml;base64,${btoa(svg)}`;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function getCookie(name: string): string | null {
-  const match = document.cookie
-    .split(";")
-    .map((c) => c.trim().split("="))
-    .find(([key]) => key === name);
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
 // ── Component ─────────────────────────────────────────────────────────────────
 
 type AvatarMode = "generated";
-
-const API_URL = "http://localhost:3002/";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -103,7 +93,7 @@ export default function ProfilePage() {
 
   const token = getCookie("access_token");
 
-  fetch(`${API_URL}profiles/${userId}`, {
+  fetch(`${API_URL}/profiles/${userId}`, {
     headers: {
       "Authorization": `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -151,7 +141,7 @@ export default function ProfilePage() {
 
 
     try {
-      const response = await fetch(`${API_URL}profiles/${userId}`, {
+      const response = await fetch(`${API_URL}/profiles/${userId}`, {
         method: "PATCH",
         headers: {
         "Content-Type": "application/json",
@@ -203,7 +193,7 @@ export default function ProfilePage() {
     const token = getCookie("access_token");
 
     try {
-      const response = await fetch(`${API_URL}profiles/${userId}`, {
+      const response = await fetch(`${API_URL}/profiles/${userId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

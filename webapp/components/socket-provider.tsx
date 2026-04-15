@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { connectSocket, disconnectSocket } from "@/lib/socket";
+import { getCookie } from "@/lib/cookies";
 
 type SocketStatus = "disconnected" | "connecting" | "connected" | "error";
 
@@ -24,15 +25,6 @@ const SocketStatusContext = createContext<SocketStatusContextValue>({
 
 export function useSocketStatus(): SocketStatusContextValue {
   return useContext(SocketStatusContext);
-}
-
-function getCookie(name: string): string | null {
-  const prefix = `${name}=`;
-  const cookie = document.cookie
-    .split("; ")
-    .find((entry) => entry.startsWith(prefix));
-
-  return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : null;
 }
 
 export default function SocketProvider({ children }: { children: ReactNode }) {

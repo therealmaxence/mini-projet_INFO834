@@ -1,10 +1,15 @@
 import { io, type Socket } from "socket.io-client";
 
-const SOCKET_URL = "http://localhost:3001";
-
 let socket: Socket | null = null;
 
 export function getSocket(): Socket {
+  if (typeof window === "undefined") {
+    throw new Error("Socket can only be initialized in the browser");
+  }
+
+  const hostname = window.location.hostname;
+  const SOCKET_URL = `http://${hostname}:3001`;
+
   if (!socket) {
     socket = io(SOCKET_URL, {
       autoConnect: false,

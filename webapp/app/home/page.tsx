@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-
-const API_URL = 'http://localhost:3002';
+import { API_URL } from "@/lib/api";
+import { getAccessToken } from "@/lib/cookies";
 
 interface Channel {
   _id: string;
@@ -13,15 +13,7 @@ interface Channel {
   visibility: string;
 }
 
-const cookieString = document.cookie;
-const getCookieValue = (name : string) => {
-  const row = cookieString.split('; ').find(row => row.startsWith(`${name}=`));
-  return row ? row.split('=')[1] : null;
-};
-
-const token = getCookieValue('access_token');
-
-export const getUserConnected = async () => {
+export const getUserConnected = async (token: string) => {
   const response = await  fetch(`${API_URL}/auth/me`, {
     method: 'GET',
     headers: {
@@ -38,6 +30,12 @@ export const getUserConnected = async () => {
 };
 
 export const getUserId_withUsername = async (username: string) => {
+  const token = getAccessToken();
+
+  if (!token) {
+    throw new Error('Aucun token disponible');
+  }
+
   const response = await fetch(`${API_URL}/profiles/search?username=${username}`, {
     method: 'GET',
     headers: {
@@ -100,6 +98,8 @@ export default function HomePage() {
   const [visibility, setVisibility] = useState("public");
   
   useEffect(() => {
+    const token = getAccessToken();
+
     if (token) {
       getChannels(token)
         .then(channels => {
@@ -115,6 +115,8 @@ export default function HomePage() {
 
   const handleCreateChannel = async (e: React.FormEvent) => {
     e.preventDefault();
+    const token = getAccessToken();
+
     if (!token) return;
 
     try {

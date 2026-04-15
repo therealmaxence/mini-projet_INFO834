@@ -1,11 +1,6 @@
-export function getCookie(name: string): string | null {
-  const prefix = `${name}=`;
-  const cookie = document.cookie
-    .split("; ")
-    .find((entry) => entry.startsWith(prefix));
+import { getCookie } from "./cookies";
 
-  return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : null;
-}
+export { getCookie } from "./cookies";
 
 export function hasActiveSession(): boolean {
   const token = getCookie("access_token");

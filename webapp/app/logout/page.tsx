@@ -3,10 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { disconnectSocket } from "@/lib/socket";
-
-function clearCookie(name: string): void {
-  document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; Secure; SameSite=Strict`;
-}
+import { clearCookie } from "@/lib/cookies";
 
 export default function LogoutPage() {
   const router = useRouter();
