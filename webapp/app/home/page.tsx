@@ -13,7 +13,7 @@ interface Channel {
   visibility: string;
 }
 
-const cookieString = document.cookie;
+const cookieString = typeof document !== 'undefined' ? document.cookie : "";
 const getCookieValue = (name : string) => {
   const row = cookieString.split('; ').find(row => row.startsWith(`${name}=`));
   return row ? row.split('=')[1] : null;
@@ -22,7 +22,7 @@ const getCookieValue = (name : string) => {
 const token = getCookieValue('access_token');
 
 export const getUserConnected = async () => {
-  const response = await  fetch(`${API_URL}/auth/me`, {
+  const response = await fetch(`${API_URL}/auth/me`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -218,7 +218,11 @@ export default function HomePage() {
              key={channel._id}
              className="flex items-center border-b border-gray-100 p-3 hover:bg-gray-50 transition-colors"
            >
-             <div className="h-12 w-12 flex-shrink-0 rounded-full bg-gray-300"></div>
+             {/* Updated Channel Icon */}
+             <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-300 text-xl font-bold text-gray-700 uppercase">
+               {channel.name ? channel.name[0] : "#"}
+             </div>
+             
              <div className="ml-4 flex-1 overflow-hidden">
                <div className="flex items-baseline justify-between">
                  <h3 className="truncate text-base font-medium text-gray-900">{channel.name}</h3>

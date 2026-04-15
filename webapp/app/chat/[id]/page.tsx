@@ -9,7 +9,6 @@ import { generateAvatar, svgToDataUrl } from "@/utils/avatar";
 
 const API_URL = "http://localhost:3002";
 
-// Updated interface to include the dates
 interface Message {
   _id: string;
   owner: any;
@@ -178,7 +177,12 @@ export default function ChatRoomPage() {
           </svg>
         </Link>
         <div className="flex items-center flex-1">
-          <div className="h-10 w-10 rounded-full bg-gray-300"></div>
+          
+          {/* Updated Channel Icon */}
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gray-300 text-lg font-bold text-gray-700 uppercase">
+            {chanelName ? chanelName[0] : "#"}
+          </div>
+
           <div className="ml-3">
             <h2 className="text-base font-medium text-gray-900">{chanelName || `Chat #${chatId}`}</h2>
           </div>
@@ -226,7 +230,7 @@ export default function ChatRoomPage() {
                 {msg.content.startsWith("http") ? (
                   <img src={msg.content} alt="GIF" className="max-w-[200px] rounded-lg" />
                 ) : (
-                  <p className="text-sm">{msg.content}</p>
+                  <p className="text-sm text-gray-900">{msg.content}</p>
                 )}
 
                 {/* Timestamp & Edit status */}
@@ -307,7 +311,7 @@ export default function ChatRoomPage() {
               value={messageInput}
               onChange={(e) => setMessageInput(e.target.value)}
               placeholder="Type a message"
-              className="w-full rounded-full border-none bg-white px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-300 shadow-sm"
+              className="w-full rounded-full border-none bg-white px-4 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-300 shadow-sm"
             />
           )}
 
