@@ -5,7 +5,7 @@ import { Grid } from "@giphy/react-components";
 import { GiphyFetch } from "@giphy/js-fetch-api";
 import type { IGif } from "@giphy/js-types";
 
-const gf = new GiphyFetch(process.env.NEXT_PUBLIC_GIPHY_API_KEY!);
+const gf = new GiphyFetch(process.env.NEXT_PUBLIC_GIPHY_API_KEY);
 
 interface GifPickerProps {
   onSelect: (gif: IGif, url: string) => void;
