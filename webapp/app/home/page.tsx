@@ -138,7 +138,7 @@ export default function HomePage() {
       <div className="flex h-16 items-center justify-between bg-gray-50 px-4 py-3 border-b border-gray-200">
         <h1 className="text-xl font-semibold text-gray-900">Chats</h1>
         <div className="flex space-x-4 text-gray-500">
-          <button onClick={() => setIsModalOpen(true)} className="px-4 py-2 text-black hover:text-gray-700 focus:outline-none">
+          <button onClick={() => setIsModalOpen(true)} className="hover:text-gray-700 focus:outline-none">
             
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
           </button>
@@ -146,11 +146,11 @@ export default function HomePage() {
       </div>
       {isModalOpen && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-        <div className="w-full max-w-md rounded-black bg-white p-6 shadow-xl">
-          <h2 className="mb-4 text-black font-bold">Nouveau Canal</h2>
-          <form onSubmit={handleCreateChannel} className="space-y-4 text-black">
+        <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+          <h2 className="mb-4 text-lg font-bold">Nouveau Canal</h2>
+          <form onSubmit={handleCreateChannel} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-black">Nom du canal</label>
+              <label className="block text-sm font-medium">Nom du canal</label>
               <input
                 type="text"
                 required
@@ -160,7 +160,7 @@ export default function HomePage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-black">Inviter un utilisateur (Username)</label>
+              <label className="block text-sm font-medium">Inviter un utilisateur (Username)</label>
               <input
                 type="text"
                 required
@@ -170,7 +170,7 @@ export default function HomePage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-black">Visibilité</label>
+              <label className="block text-sm font-medium">Visibilité</label>
               <select 
                 className="w-full rounded border p-2"
                 value={visibility}

@@ -85,6 +85,10 @@ export default function ChatRoomPage() {
   const params = useParams();
   const chatId = Array.isArray(params.id) ? params.id[0] : params.id;
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newChanelName, setNewChanelName] = useState("");
+  const [searchUsername, setSearchUsername] = useState("");
+  const [visibility, setVisibility] = useState("public");
   const [messageInput, setMessageInput] = useState("");
   const [chanelName, setChanelName] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -109,6 +113,25 @@ export default function ChatRoomPage() {
     };
     fetchUser();
   }, []);
+
+  const handleCreateChannel = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!token) return;
+  
+      try {
+        const member = await getUserId_withUsername(searchUsername);
+        const memberId = member[0]._id;
+        const newChannel = await postChanel(token, [memberId], newChanelName, visibility);
+  
+        setREAL_CHANELS((prev) => [...prev, newChannel]);
+        setIsModalOpen(false);
+        setNewChanelName("");
+        setSearchUsername("");
+      } catch (error) {
+        console.error("Erreur lors de la création :", error);
+        alert("Utilisateur non trouvé ou erreur de création");
+        }
+    };
 
   // Load profile info from localStorage on mount
   useEffect(() => {
@@ -182,6 +205,67 @@ export default function ChatRoomPage() {
           <div className="ml-3">
             <h2 className="text-base font-medium text-gray-900">{chanelName || `Chat #${chatId}`}</h2>
           </div>
+          <div className="flex space-x-4 text-gray-500">
+            <button onClick={() => setIsModalOpen(true)} className="px-4 py-2 text-black hover:text-gray-700 focus:outline-none">
+              
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+            </button>
+        </div>
+        {isModalOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+          <h2 className="mb-4 text-lg font-bold">Nouveau Canal</h2>
+          <form onSubmit={handleCreateChannel} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium">Nom du canal</label>
+              <input
+                type="text"
+                required
+                className="w-full rounded border p-2"
+                value={newChanelName}
+                onChange={(e) => setNewChanelName(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Inviter un utilisateur (Username)</label>
+              <input
+                type="text"
+                required
+                className="w-full rounded border p-2"
+                value={searchUsername}
+                onChange={(e) => setSearchUsername(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Visibilité</label>
+              <select 
+                className="w-full rounded border p-2"
+                value={visibility}
+                onChange={(e) => setVisibility(e.target.value)}
+              >
+                <option value="public">Public</option>
+                <option value="private">Privé</option>
+              </select>
+            </div>
+            <div className="flex justify-end space-x-2 pt-2">
+              <button 
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 text-gray-500 hover:text-gray-700"
+              >
+                Annuler
+              </button>
+              <button 
+                type="submit"
+                className="rounded bg-black px-4 py-2 text-white"
+              >
+                Créer
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      )}
         </div>
       </div>
 
