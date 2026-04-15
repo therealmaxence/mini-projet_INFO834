@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import GifPicker from "@/components/GifPicker";
 import type { IGif } from "@giphy/js-types";
 import { generateAvatar, svgToDataUrl } from "@/utils/avatar";
+import { getUserId_withUsername } from "@/app/home/page";
 
 const API_URL = "http://localhost:3002";
 
@@ -53,6 +54,26 @@ export const getUserConnected = async () => {
   return response.json();
 };
 
+export const getMembers = async (chatId: string) => {
+  const response = await fetch(`${API_URL}/channels/${chatId}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  console.log("HOP");
+
+  if (!response.ok) {
+    throw new Error("Erreur lors de la récupération des membres du canal");
+  }
+
+  const data = await response.json();
+
+  return data.members;
+};
+
 export const postMessage = async (token: string, chatId: string, content: string) => {
   const response = await fetch(`${API_URL}/messages`, {
     method: "POST",
@@ -64,6 +85,20 @@ export const postMessage = async (token: string, chatId: string, content: string
   });
 
   if (!response.ok) throw new Error("Erreur lors de l'envoi du message");
+  return response.json();
+};
+
+export const updateChannel = async (token: string, chatId: string, channelData: any) => {
+  const response = await fetch(`${API_URL}/channels/${chatId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(channelData),
+  });
+
+  if (!response.ok) throw new Error("Erreur lors de la mise à jour du canal");
   return response.json();
 };
 
@@ -84,6 +119,7 @@ export default function ChatRoomPage() {
   const params = useParams();
   const chatId = Array.isArray(params.id) ? params.id[0] : params.id;
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [messageInput, setMessageInput] = useState("");
   const [chanelName, setChanelName] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -94,6 +130,74 @@ export default function ChatRoomPage() {
   const canSend = messageInput.trim().length > 0 || !!pendingGif;
   const [profileUsername, setProfileUsername] = useState("");
   const [profileAvatar, setProfileAvatar] = useState("");
+
+  const [editChanelName, setEditChanelName] = useState("");
+  const [editVisibility, setEditVisibility] = useState("public");
+  const [members, setMembers] = useState<{ _id: string; username: string }[]>([]);
+  const [searchUsername, setSearchUsername] = useState("");
+
+
+  const handleOpenEditModal = async () => {
+    if (!token || !chatId) return;
+    try {
+      const channelMembers = await getMembers(chatId);
+      console.log("Membres du canal :", channelMembers);
+      setMembers(channelMembers);
+      setEditChanelName(chanelName);
+      // Si tu as un moyen de récupérer la visibilité actuelle, fais-le ici.
+      // Par défaut on laisse "public" ou l'état actuel.
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error("Erreur lors de l'ouverture des paramètres :", error);
+    }
+  };
+
+  const handleAddMember = async () => {
+    if (!searchUsername.trim() || !token) return;
+    try {
+      // getUserId_withUsername doit exister dans ton code actuel
+      const users = await getUserId_withUsername(searchUsername); 
+      if (users && users.length > 0) {
+        const newUser = users[0];
+        // Vérifie si l'utilisateur n'est pas déjà dans la liste
+        if (!members.some((m) => m._id === newUser._id)) {
+          setMembers([...members, { _id: newUser._id, username: newUser.username }]);
+        }
+        setSearchUsername("");
+      } else {
+        alert("Utilisateur non trouvé");
+      }
+    } catch (error) {
+      console.error("Erreur lors de la recherche :", error);
+      alert("Erreur lors de l'ajout de l'utilisateur");
+    }
+  };
+
+  const handleUpdateChannelSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !chatId) return;
+
+    try {
+      const memberIds = members.map((m) => m._id);
+      
+      await updateChannel(token, chatId, {
+        name: editChanelName,
+        visibility: editVisibility,
+        members: memberIds,
+      });
+    
+    setChanelName(editChanelName);
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour :", error);
+      alert("Erreur lors de la mise à jour du canal");
+    }
+  };
+
+  // Retirer un membre de la liste visuelle
+  const handleRemoveMember = (idToRemove: string) => {
+    setMembers(members.filter((m) => m._id !== idToRemove));
+  };
 
   // Fetch connected user
   useEffect(() => {
@@ -108,6 +212,8 @@ export default function ChatRoomPage() {
     };
     fetchUser();
   }, []);
+
+  
 
   // Load profile info from localStorage on mount
   useEffect(() => {
@@ -186,7 +292,110 @@ export default function ChatRoomPage() {
           <div className="ml-3">
             <h2 className="text-base font-medium text-gray-900">{chanelName || `Chat #${chatId}`}</h2>
           </div>
+          <div className="flex space-x-4 text-gray-500 ml-auto">
+            <button onClick={() => handleOpenEditModal()} className="px-4 py-2 text-black hover:text-gray-700 focus:outline-none">
+              
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+            </button>
+          
         </div>
+      </div>
+      {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+            <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+              <h2 className="mb-4 text-lg font-bold">Modifier le Canal</h2>
+              
+              <form onSubmit={handleUpdateChannelSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Nom du canal</label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full rounded border p-2"
+                    value={editChanelName}
+                    onChange={(e) => setEditChanelName(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Membres du canal</label>
+                  
+                  {/* Affichage des tags des membres */}
+                  <div className="flex flex-wrap gap-2 mb-3 min-h-[32px] p-2 border rounded bg-gray-50">
+                    {members.map((member) => (
+                      <span 
+                        key={member._id} 
+                        className="flex items-center gap-1 bg-black text-white px-3 py-1 rounded-full text-xs"
+                      >
+                        {member.username}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMember(member._id)}
+                          className="ml-1 text-gray-300 hover:text-red-400 font-bold focus:outline-none"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                    {members.length === 0 && <span className="text-gray-400 text-sm">Aucun membre</span>}
+                  </div>
+
+                  {/* Input pour ajouter un nouveau membre */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Inviter via Username"
+                      className="flex-1 rounded border p-2"
+                      value={searchUsername}
+                      onChange={(e) => setSearchUsername(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddMember();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddMember}
+                      className="rounded bg-gray-200 px-4 py-2 hover:bg-gray-300 text-sm font-medium"
+                    >
+                      Ajouter
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Visibilité</label>
+                  <select
+                    className="w-full rounded border p-2"
+                    value={editVisibility}
+                    onChange={(e) => setEditVisibility(e.target.value)}
+                  >
+                    <option value="public">Public</option>
+                    <option value="private">Privé</option>
+                  </select>
+                </div>
+
+                <div className="flex justify-end space-x-2 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-4 py-2 text-gray-500 hover:text-gray-700"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded bg-black px-4 py-2 text-white hover:bg-gray-800"
+                  >
+                    Enregistrer
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Message Feed */}

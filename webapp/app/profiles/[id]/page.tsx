@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { generateAvatar, svgToDataUrl } from "@/utils/avatar";
-
 type AvatarMode = "generated";
 
 const API_URL = "http://localhost:3002/";
@@ -172,12 +171,12 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center pt-7 px-4 pb-16 font-['DM_Sans',sans-serif]">
       
-      <Link href="/" className="flex items-center gap-1.5 text-[#3b4a54] text-sm font-medium no-underline self-start mb-5 transition-colors duration-150 hover:text-[#00a884]">
+      <button onClick={() => router.back()} className="flex items-center gap-1.5 text-[#3b4a54] text-sm font-medium no-underline self-start mb-5 transition-colors duration-150 hover:text-[#00a884]">
         <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
         Back
-      </Link>
+      </button>
 
       <div className="w-full max-w-[600px] bg-white rounded-[20px] shadow-[0_4px_32px_rgba(0,0,0,0.08)] overflow-hidden">
         
