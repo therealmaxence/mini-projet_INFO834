@@ -72,7 +72,8 @@ export class ChannelsService {
     const userId = new Types.ObjectId(user._id);
     const isOwner = channel.owner.equals(userId);
     const isAdmin = user.role === Role.ADMIN;
+    const isPublic = channel.visibility === Visibility.PUBLIC;
 
-    return isOwner || isAdmin;
+    return isOwner || isAdmin || isPublic;
   }
 }
