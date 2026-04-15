@@ -129,6 +129,7 @@ export default function ChatRoomPage() {
   const [pendingGif, setPendingGif] = useState<{ url: string; alt: string } | null>(null);
 
   const canSend = messageInput.trim().length > 0 || !!pendingGif;
+  const [profileUsername, setProfileUsername] = useState("");
   const [profileAvatar, setProfileAvatar] = useState("");
 
   const [editChanelName, setEditChanelName] = useState("");
