@@ -40,9 +40,9 @@ export class ChannelsController {
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateChannelDto: UpdateChannelDto, @Request() req) {
     const channel = await this.channelsService.findOne(id);
-    const hasAutority = this.channelsService.hasAutority(channel, req.user.sub);
+    const isVisible = this.channelsService.isVisible(channel, req.user.sub);
 
-    if (!hasAutority) {
+    if (!isVisible) {
       throw new UnauthorizedException('Not allowed to modify this channel')
     }
 

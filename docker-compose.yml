@@ -34,6 +34,7 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
+      - REDIS_URL=redis://redis:6379
     env_file:
       - .env.local
     depends_on:
@@ -108,17 +109,10 @@ services:
       mongo-secondary:
         condition: service_healthy
     restart: "no"
-    entrypoint: >
-      mongosh --host mongo-primary:27017 --eval "
-        rs.initiate({
-          _id: 'rs0',
-          members: [
-            { _id: 0, host: 'mongo-primary:27017', priority: 2 },
-            { _id: 1, host: 'mongo-secondary:27017', priority: 1 }
-          ]
-        });
-        print('Replica set initialisé !');
-      "
+    volumes:
+      - ./mongo-init/init.sh:/init.sh
+      - ./mongo-init/seeds:/seeds
+    entrypoint: ["bash", "/init.sh"]
   # # - Primary MongoDB instance
   mongo-primary:
     image: mongo:7

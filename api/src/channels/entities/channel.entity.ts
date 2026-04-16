@@ -47,3 +47,9 @@ ChannelSchema.pre<mongoose.Query<any, Channel>>(['find', 'findOne'], async funct
   this.populate('owner');
   this.populate('members');
 });
+
+ChannelSchema.post('save', async function (doc, next) {
+  await doc.populate('owner');
+  await doc.populate('members');
+  next();
+});
