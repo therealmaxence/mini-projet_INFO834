@@ -162,6 +162,7 @@ export default function ChatRoomPage() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [chanelName, setChanelName] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const userRef = useRef<UserProfile | null>(null);
 
   const token = getAccessToken();
   const canSend = messageInput.trim().length > 0 || !!pendingGif;
@@ -247,6 +248,9 @@ export default function ChatRoomPage() {
       const newMessage = await postMessage(token, chatId, content);
       setMessages((prev: Message[]) => [...prev, newMessage]);
 
+      const created = newMessage.created ?? new Date().toISOString();
+      const updated = newMessage.updated ?? created;
+
       const socket = getSocket();
       socket.emit("message", {
         _id: newMessage._id,
@@ -254,6 +258,8 @@ export default function ChatRoomPage() {
         channel: chatId,
         type: newMessage.type,
         content: newMessage.content,
+        created,
+        updated,
       });
 
       setMessageInput("");
@@ -281,6 +287,7 @@ export default function ChatRoomPage() {
           return;
         }
 
+        userRef.current = userData;
         setUser(userData);
         setMessages(channelMessages);
         setChanelName(channelName);
@@ -303,11 +310,22 @@ export default function ChatRoomPage() {
     const onMessage = (msg: Message) => {
       const channelMatches = typeof msg.channel === "string" ? msg.channel === chatId : msg.channel?._id === chatId;
 
-      if (!channelMatches) {
-        return;
+      if (!channelMatches) return;
+
+      setMessages((prev: Message[]) => {
+        if (prev.some((existing) => existing._id === msg._id)) {
+          return prev;
+        }
+
+        return [...prev, msg];
+      });
+
+      const currentUserId = userRef.current?._id;
+      if (currentUserId && msg.owner._id !== currentUserId) {
+        const audio = new Audio("/whatsapp.mp3");
+        void audio.play();
       }
 
-      setMessages((prev: Message[]) => [...prev, msg]);
       setTimeout(scrollToBottom, 0);
     };
 

@@ -231,7 +231,13 @@ io.on('connection', (socket) => {
   socket.on('message', (msg) => {
     if (!msg?.channel) return;
     const roomName = `channel:${msg.channel}`;
-    io.to(roomName).emit('message', msg);
+    const created = msg.created ?? new Date().toISOString();
+    const updated = msg.updated ?? created;
+    io.to(roomName).emit('message', {
+      ...msg,
+      created,
+      updated,
+    });
     console.log(`[MSG] ${username} -> ${roomName}`);
   });
 
