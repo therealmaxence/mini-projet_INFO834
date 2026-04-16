@@ -53,7 +53,7 @@ L’architecture mise en place repose sur une approche microservices conteneuris
   - Développement du module WebSocket
  
 ## 5. État d’avancement
-### 5.1 Backend – API REST (≈ 95% terminé)
+### 5.1 Backend – API REST (Terminé)
 
 L’API est presque entièrement fonctionnelle :
 - Toutes les routes principales sont implémentées et utilisables
@@ -62,48 +62,20 @@ L’API est presque entièrement fonctionnelle :
   - Création et gestion des salons (channels)
   - Envoi et stockage des messages (texte et fichiers)
   - Gestion de la visibilité (public / privé)
-Amélioration en cours :
-- Optimisation du format des réponses API (enrichissement des relations)
-Exemple actuel :
-```
-{ 
-  "_id": "d6s5fds4qsq5sq5", 
-  "owner": "sq5d4qs1qcq4cw2", 
-  "name": "channel1" 
-}
-```
-Objectif :
-```
-{ 
-  "_id": "d6s5fds4qsq5sq5", 
-  "owner": { 
-    "_id": "sq5d4qs1qcq4cw2", 
-    "username": "profile1" 
-  }, 
-  "name": "channel1" 
-}
-```
-### 5.2 Frontend (avancement visuel terminé)
+  
+### 5.2 Frontend (Terminé)
 - Pages réalisées :
   - Login
   - Register
+  - Profile
   - Interface de messagerie
-- L’interface utilisateur est finalisée sur le plan esthétique
-Reste à faire :
-- Connexion complète avec l’API
-- Intégration avec les WebSockets pour le temps réel
-### 5.3 WebSocket
-- Mise en place initiale effectuée
-- Fonctionnalités déjà présentes :
-  - Connexion des utilisateurs
-  - Authentification via token (JWT)
-Reste à faire :
-- Synchronisation complète avec le frontend
-- Gestion en temps réel des messages (émission / réception)
-- Intégration avec Redis pour les états en ligne
+  - Interface des salons
 
-## 6. Points à finaliser
-- Liaison Frontend ↔ API ↔ WebSocket
-- Amélioration des réponses API (population des données MongoDB)
-- Exploitation complète de Redis (utilisateurs connectés, statistiques)
-- Tests globaux et validation fonctionnelle
+### 5.3 WebSocket (Terminé)
+- Connection des utilisateurs (JWT)
+- Transfère des messages dans les salons
+- Communication avec Redis sur les utilisateurs en temps réel
+
+## 6. Axes d'amélioration
+- Permettre d'envoyé des fichier via webapp
+- Ajouter des plus statistiques sur Redis
