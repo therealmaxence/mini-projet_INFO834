@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-
-const API_URL = 'http://localhost:3002';
+import { API_URL } from "@/lib/api";
+import { getAccessToken } from "@/lib/cookies";
 
 interface Channel {
   _id: string;
@@ -13,16 +13,8 @@ interface Channel {
   visibility: string;
 }
 
-const cookieString = typeof document !== 'undefined' ? document.cookie : "";
-const getCookieValue = (name : string) => {
-  const row = cookieString.split('; ').find(row => row.startsWith(`${name}=`));
-  return row ? row.split('=')[1] : null;
-};
-
-const token = getCookieValue('access_token');
-
-export const getUserConnected = async () => {
-  const response = await fetch(`${API_URL}/auth/me`, {
+export const getUserConnected = async (token: string) => {
+  const response = await  fetch(`${API_URL}/auth/me`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -38,6 +30,12 @@ export const getUserConnected = async () => {
 };
 
 export const getUserId_withUsername = async (username: string) => {
+  const token = getAccessToken();
+
+  if (!token) {
+    throw new Error('Aucun token disponible');
+  }
+
   const response = await fetch(`${API_URL}/profiles/search?username=${username}`, {
     method: 'GET',
     headers: {
@@ -100,6 +98,8 @@ export default function HomePage() {
   const [visibility, setVisibility] = useState("public");
   
   useEffect(() => {
+    const token = getAccessToken();
+
     if (token) {
       getChannels(token)
         .then(channels => {
@@ -115,6 +115,8 @@ export default function HomePage() {
 
   const handleCreateChannel = async (e: React.FormEvent) => {
     e.preventDefault();
+    const token = getAccessToken();
+
     if (!token) return;
 
     try {
@@ -142,6 +144,12 @@ export default function HomePage() {
             
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
           </button>
+          <Link
+            href="/logout"
+            className="text-sm font-medium text-gray-600 hover:text-gray-900"
+          >
+            Logout
+          </Link>
         </div>
       </div>
       {isModalOpen && (

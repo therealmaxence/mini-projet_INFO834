@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { useRouter, useParams } from "next/navigation";
+import { type FormEvent, useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { API_URL } from "@/lib/api";
+import { getAccessToken } from "@/lib/cookies";
 import { generateAvatar, svgToDataUrl } from "@/utils/avatar";
-type AvatarMode = "generated";
-
-const API_URL = "http://localhost:3002/";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -20,15 +18,11 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!userId) return;
 
-    const cookieString = typeof document !== 'undefined' ? document.cookie : "";
-    const getCookieValue = (name: string) => {
-      const row = cookieString.split("; ").find((row) => row.startsWith(`${name}=`));
-      return row ? row.split("=")[1] : null;
-    };
+    const token = getAccessToken();
 
-    const token = getCookieValue("access_token");
+    if (!token) return;
 
-    fetch(`${API_URL}profiles/${userId}`, {
+    fetch(`${API_URL}/profiles/${userId}`, {
       headers: {
         "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json",
@@ -74,15 +68,16 @@ export default function ProfilePage() {
     setIsLoading(true);
     setError("");
 
-    const cookieString = typeof document !== 'undefined' ? document.cookie : "";
-    const getCookieValue = (name: string) => {
-      const row = cookieString.split("; ").find((row) => row.startsWith(`${name}=`));
-      return row ? row.split("=")[1] : null;
-    };
-    const token = getCookieValue("access_token");
+    const token = getAccessToken();
+
+    if (!token) {
+      setError("Aucun token disponible.");
+      setIsLoading(false);
+      return;
+    }
 
     try {
-      const response = await fetch(`${API_URL}profiles/${userId}`, {
+      const response = await fetch(`${API_URL}/profiles/${userId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -113,7 +108,7 @@ export default function ProfilePage() {
   };
 
   // ── Password ──
-  const handlePasswordSave = async (e: React.FormEvent) => {
+  const handlePasswordSave = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!currentPassword) {
@@ -132,15 +127,16 @@ export default function ProfilePage() {
     setIsLoading(true);
     setError("");
 
-    const cookieString = typeof document !== 'undefined' ? document.cookie : "";
-    const getCookieValue = (name: string) => {
-      const row = cookieString.split("; ").find((row) => row.startsWith(`${name}=`));
-      return row ? row.split("=")[1] : null;
-    };
-    const token = getCookieValue("access_token");
+    const token = getAccessToken();
+
+    if (!token) {
+      setPasswordMsg({ type: "err", text: "Aucun token disponible." });
+      setIsLoading(false);
+      return;
+    }
 
     try {
-      const response = await fetch(`${API_URL}profiles/${userId}`, {
+      const response = await fetch(`${API_URL}/profiles/${userId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

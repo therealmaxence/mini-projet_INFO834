@@ -1,47 +1,62 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import GifPicker from "@/components/GifPicker";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import type { IGif } from "@giphy/js-types";
-import { generateAvatar, svgToDataUrl } from "@/utils/avatar";
+import GifPicker from "@/components/GifPicker";
+import { API_URL } from "@/lib/api";
+import { getAccessToken } from "@/lib/cookies";
+import { getSocket } from "@/lib/socket";
 import { getUserId_withUsername } from "@/app/home/page";
-
-const API_URL = "http://localhost:3002";
+import { generateAvatar, svgToDataUrl } from "@/utils/avatar";
 
 interface Message {
   _id: string;
-  owner: any;
-  channel: Object;
+  owner: {
+    _id: string;
+    username?: string;
+  };
+  channel: string | { _id?: string };
   type: string;
   content: string;
   created: string;
   updated: string;
 }
 
-const cookieString = typeof document !== 'undefined' ? document.cookie : "";
-const getCookieValue = (name: string) => {
-  const row = cookieString.split("; ").find((row) => row.startsWith(`${name}=`));
-  return row ? row.split("=")[1] : null;
-};
+interface ChannelMember {
+  _id: string;
+  username: string;
+}
 
-const token = getCookieValue("access_token");
+interface UserProfile {
+  _id: string;
+  username?: string;
+}
 
-export const getMessages = async (token: string, chatId: string) => {
+export const getMessages = async (authToken: string, chatId: string) => {
   const response = await fetch(`${API_URL}/messages/channel/${chatId}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${authToken}`,
     },
   });
 
-  if (!response.ok) throw new Error("Erreur lors de la récupération des messages");
+  if (!response.ok) {
+    throw new Error("Erreur lors de la récupération des messages");
+  }
+
   return response.json();
 };
 
-export const getUserConnected = async () => {
+export const getUserConnected = async (authToken?: string) => {
+  const token = authToken ?? getAccessToken();
+
+  if (!token) {
+    throw new Error("Aucun token disponible");
+  }
+
   const response = await fetch(`${API_URL}/auth/me`, {
     method: "GET",
     headers: {
@@ -50,16 +65,19 @@ export const getUserConnected = async () => {
     },
   });
 
-  if (!response.ok) throw new Error("Erreur lors de la récupération du user");
+  if (!response.ok) {
+    throw new Error("Erreur lors de la récupération du user");
+  }
+
   return response.json();
 };
 
-export const getMembers = async (chatId: string) => {
+export const getMembers = async (authToken: string, chatId: string) => {
   const response = await fetch(`${API_URL}/channels/${chatId}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${authToken}`,
     },
   });
 
@@ -68,48 +86,60 @@ export const getMembers = async (chatId: string) => {
   }
 
   const data = await response.json();
-
-  return data.members;
+  return data.members ?? [];
 };
 
-export const postMessage = async (token: string, chatId: string, content: string) => {
+export const postMessage = async (authToken: string, chatId: string, content: string) => {
   const response = await fetch(`${API_URL}/messages`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${authToken}`,
     },
     body: JSON.stringify({ channel: chatId, content }),
   });
 
-  if (!response.ok) throw new Error("Erreur lors de l'envoi du message");
+  if (!response.ok) {
+    throw new Error("Erreur lors de l'envoi du message");
+  }
+
   return response.json();
 };
 
-export const updateChannel = async (token: string, chatId: string, channelData: any) => {
+export const updateChannel = async (
+  authToken: string,
+  chatId: string,
+  channelData: Record<string, unknown>,
+) => {
   const response = await fetch(`${API_URL}/channels/${chatId}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${authToken}`,
     },
     body: JSON.stringify(channelData),
   });
 
-  if (!response.ok) throw new Error("Erreur lors de la mise à jour du canal");
+  if (!response.ok) {
+    throw new Error("Erreur lors de la mise à jour du canal");
+  }
+
   return response.json();
 };
 
-export const getChanelName = async (token: string, chatId: string) => {
+export const getChanelName = async (authToken: string, chatId: string) => {
   const response = await fetch(`${API_URL}/channels/${chatId}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${authToken}`,
     },
   });
 
-  if (!response.ok) throw new Error("Erreur lors de la récupération du nom du canal");
+  if (!response.ok) {
+    throw new Error("Erreur lors de la récupération du nom du canal");
+  }
+
   return response.json().then((data) => data.name);
 };
 
@@ -119,31 +149,34 @@ export default function ChatRoomPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [messageInput, setMessageInput] = useState("");
-  const [chanelName, setChanelName] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [user, setUser] = useState<any>(null);
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [pendingGif, setPendingGif] = useState<{ url: string; alt: string } | null>(null);
-
-  const canSend = messageInput.trim().length > 0 || !!pendingGif;
   const [profileUsername, setProfileUsername] = useState("");
   const [profileAvatar, setProfileAvatar] = useState("");
-
   const [editChanelName, setEditChanelName] = useState("");
   const [editVisibility, setEditVisibility] = useState("public");
-  const [members, setMembers] = useState<{ _id: string; username: string }[]>([]);
+  const [members, setMembers] = useState<ChannelMember[]>([]);
   const [searchUsername, setSearchUsername] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [channelUsers, setChannelUsers] = useState(0);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [chanelName, setChanelName] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const token = getAccessToken();
+  const canSend = messageInput.trim().length > 0 || !!pendingGif;
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  };
 
   const handleOpenEditModal = async () => {
     if (!token || !chatId) return;
+
     try {
-      const channelMembers = await getMembers(chatId);
-      console.log("Membres du canal :", channelMembers);
+      const channelMembers = await getMembers(token, chatId);
       setMembers(channelMembers);
       setEditChanelName(chanelName);
-      // Si tu as un moyen de récupérer la visibilité actuelle, fais-le ici.
-      // Par défaut on laisse "public" ou l'état actuel.
       setIsModalOpen(true);
     } catch (error) {
       console.error("Erreur lors de l'ouverture des paramètres :", error);
@@ -152,13 +185,13 @@ export default function ChatRoomPage() {
 
   const handleAddMember = async () => {
     if (!searchUsername.trim() || !token) return;
+
     try {
-      // getUserId_withUsername doit exister dans ton code actuel
-      const users = await getUserId_withUsername(searchUsername); 
+      const users = await getUserId_withUsername(searchUsername);
+
       if (users && users.length > 0) {
         const newUser = users[0];
-        // Vérifie si l'utilisateur n'est pas déjà dans la liste
-        if (!members.some((m) => m._id === newUser._id)) {
+        if (!members.some((member: ChannelMember) => member._id === newUser._id)) {
           setMembers([...members, { _id: newUser._id, username: newUser.username }]);
         }
         setSearchUsername("");
@@ -171,20 +204,21 @@ export default function ChatRoomPage() {
     }
   };
 
-  const handleUpdateChannelSubmit = async (e: React.FormEvent) => {
+  const handleUpdateChannelSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     if (!token || !chatId) return;
 
     try {
-      const memberIds = members.map((m) => m._id);
-      
+      const memberIds = members.map((member: ChannelMember) => member._id);
+
       await updateChannel(token, chatId, {
         name: editChanelName,
         visibility: editVisibility,
         members: memberIds,
       });
-    
-    setChanelName(editChanelName);
+
+      setChanelName(editChanelName);
       setIsModalOpen(false);
     } catch (error) {
       console.error("Erreur lors de la mise à jour :", error);
@@ -192,283 +226,277 @@ export default function ChatRoomPage() {
     }
   };
 
-  // Retirer un membre de la liste visuelle
   const handleRemoveMember = (idToRemove: string) => {
-    setMembers(members.filter((m) => m._id !== idToRemove));
+    setMembers(members.filter((member: ChannelMember) => member._id !== idToRemove));
   };
 
-  // Fetch connected user
-  useEffect(() => {
-    const fetchUser = async () => {
-      if (!token) return;
-      try {
-        const userData = await getUserConnected();
-        setUser(userData);
-      } catch (error) {
-        console.error("Erreur lors de la récupération du user :", error);
-      }
-    };
-    fetchUser();
-  }, []);
-
-  
-
-  // Load profile info from localStorage on mount
-  useEffect(() => {
-    setProfileUsername(localStorage.getItem("profile_username") || "");
-    setProfileAvatar(localStorage.getItem("profile_avatar") || "");
-  }, []);
-
-  // Fetch channel name
-  useEffect(() => {
-    const fetchChannelName = async () => {
-      if (!token || !chatId) return;
-      try {
-        const name = await getChanelName(token, chatId);
-        setChanelName(name);
-      } catch (error) {
-        console.error("Erreur lors de la récupération du nom du canal :", error);
-      }
-    };
-    fetchChannelName();
-  }, [chatId]);
-
-  // Fetch messages
-  useEffect(() => {
-    if (!token || !chatId) {
-      console.error("Aucun token disponible");
-      return;
-    }
-    getMessages(token, chatId)
-      .then((response) => setMessages(response))
-      .catch((error) => console.error("Erreur :", error));
-  }, [chatId]);
-
-  // GIF handler
   const handleGifSelect = (gif: IGif, url: string) => {
     setPendingGif({ url, alt: gif.title || "GIF" });
     setShowGifPicker(false);
   };
 
-  // Send message (text or GIF)
-  const handleSendMessage = async (e: React.FormEvent) => {
+  const handleSendMessage = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     if (!chatId || !token) return;
 
+    const content = pendingGif?.url ?? messageInput.trim();
+    if (!content) return;
+
     try {
-      if (pendingGif) {
-        const newMessage = await postMessage(token, chatId, pendingGif.url);
-        setMessages((prev) => [...prev, newMessage]);
-        setPendingGif(null);
-      } else if (messageInput.trim()) {
-        const newMessage = await postMessage(token, chatId, messageInput);
-        setMessages((prev) => [...prev, newMessage]);
-        setMessageInput("");
-      }
+      const newMessage = await postMessage(token, chatId, content);
+      setMessages((prev: Message[]) => [...prev, newMessage]);
+
+      const socket = getSocket();
+      socket.emit("message", {
+        _id: newMessage._id,
+        owner: newMessage.owner,
+        channel: chatId,
+        type: newMessage.type,
+        content: newMessage.content,
+      });
+
+      setMessageInput("");
+      setPendingGif(null);
     } catch (error) {
       console.error("Erreur lors de l'envoi du message :", error);
       alert("Impossible d'envoyer le message.");
     }
   };
 
+  useEffect(() => {
+    if (!chatId || !token) return;
+
+    let cancelled = false;
+
+    const loadInitialData = async () => {
+      try {
+        const [userData, channelMessages, channelName] = await Promise.all([
+          getUserConnected(token),
+          getMessages(token, chatId),
+          getChanelName(token, chatId),
+        ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        setUser(userData);
+        setMessages(channelMessages);
+        setChanelName(channelName);
+        setTimeout(scrollToBottom, 0);
+      } catch (error) {
+        console.error("Erreur lors du chargement du chat :", error);
+      }
+    };
+
+    loadInitialData();
+
+    const socket = getSocket();
+
+    const onChannelUsers = (payload: { channelId: string; count: number }) => {
+      if (payload.channelId === chatId) {
+        setChannelUsers(payload.count);
+      }
+    };
+
+    const onMessage = (msg: Message) => {
+      const channelMatches = typeof msg.channel === "string" ? msg.channel === chatId : msg.channel?._id === chatId;
+
+      if (!channelMatches) {
+        return;
+      }
+
+      setMessages((prev: Message[]) => [...prev, msg]);
+      setTimeout(scrollToBottom, 0);
+    };
+
+    socket.on("channel_presence_count", onChannelUsers);
+    socket.on("message", onMessage);
+    socket.emit("join_channel", { channelId: chatId });
+
+    return () => {
+      cancelled = true;
+      socket.off("channel_presence_count", onChannelUsers);
+      socket.off("message", onMessage);
+      socket.emit("leave_channel", { channelId: chatId });
+    };
+  }, [chatId, token]);
+
+  useEffect(() => {
+    setProfileUsername(localStorage.getItem("profile_username") || "");
+    setProfileAvatar(localStorage.getItem("profile_avatar") || "");
+  }, []);
+
+  const avatarFor = (name: string) => svgToDataUrl(generateAvatar(name, 40));
+
   return (
     <div className="flex h-screen flex-col">
-      {/* Header */}
       <div className="flex h-16 items-center border-b border-gray-200 bg-gray-50 px-4 py-3">
         <Link href="/home" className="mr-4 text-gray-500 hover:text-gray-900">
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </Link>
-        <div className="flex items-center flex-1">
-          
-          {/* Updated Channel Icon */}
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gray-300 text-lg font-bold text-gray-700 uppercase">
+        <div className="flex flex-1 items-center">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gray-300 text-lg font-bold uppercase text-gray-700">
             {chanelName ? chanelName[0] : "#"}
           </div>
-
           <div className="ml-3">
             <h2 className="text-base font-medium text-gray-900">{chanelName || `Chat #${chatId}`}</h2>
+            <p className="text-xs text-gray-500">{channelUsers} utilisateur(s) connecté(s)</p>
           </div>
-          <div className="flex space-x-4 text-gray-500 ml-auto">
-            <button onClick={() => handleOpenEditModal()} className="px-4 py-2 text-black hover:text-gray-700 focus:outline-none">
-              
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+          <div className="ml-auto flex space-x-4 text-gray-500">
+            <button onClick={handleOpenEditModal} className="px-4 py-2 text-black hover:text-gray-700 focus:outline-none" type="button">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
+              </svg>
             </button>
-          
+          </div>
         </div>
       </div>
+
       {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-            <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-              <h2 className="mb-4 text-lg font-bold">Modifier le Canal</h2>
-              
-              <form onSubmit={handleUpdateChannelSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Nom du canal</label>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h2 className="mb-4 text-lg font-bold">Modifier le Canal</h2>
+
+            <form onSubmit={handleUpdateChannelSubmit} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium">Nom du canal</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full rounded border p-2"
+                  value={editChanelName}
+                  onChange={(event) => setEditChanelName(event.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">Membres du canal</label>
+                <div className="mb-3 flex min-h-[32px] flex-wrap gap-2 rounded border bg-gray-50 p-2">
+                  {members.map((member) => (
+                    <span key={member._id} className="flex items-center gap-1 rounded-full bg-black px-3 py-1 text-xs text-white">
+                      {member.username}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMember(member._id)}
+                        className="ml-1 font-bold text-gray-300 hover:text-red-400 focus:outline-none"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  {members.length === 0 && <span className="text-sm text-gray-400">Aucun membre</span>}
+                </div>
+
+                <div className="flex gap-2">
                   <input
                     type="text"
-                    required
-                    className="w-full rounded border p-2"
-                    value={editChanelName}
-                    onChange={(e) => setEditChanelName(e.target.value)}
+                    placeholder="Inviter via Username"
+                    className="flex-1 rounded border p-2"
+                    value={searchUsername}
+                    onChange={(event) => setSearchUsername(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        void handleAddMember();
+                      }
+                    }}
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">Membres du canal</label>
-                  
-                  {/* Affichage des tags des membres */}
-                  <div className="flex flex-wrap gap-2 mb-3 min-h-[32px] p-2 border rounded bg-gray-50">
-                    {members.map((member) => (
-                      <span 
-                        key={member._id} 
-                        className="flex items-center gap-1 bg-black text-white px-3 py-1 rounded-full text-xs"
-                      >
-                        {member.username}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveMember(member._id)}
-                          className="ml-1 text-gray-300 hover:text-red-400 font-bold focus:outline-none"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                    {members.length === 0 && <span className="text-gray-400 text-sm">Aucun membre</span>}
-                  </div>
-
-                  {/* Input pour ajouter un nouveau membre */}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Inviter via Username"
-                      className="flex-1 rounded border p-2"
-                      value={searchUsername}
-                      onChange={(e) => setSearchUsername(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleAddMember();
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddMember}
-                      className="rounded bg-gray-200 px-4 py-2 hover:bg-gray-300 text-sm font-medium"
-                    >
-                      Ajouter
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">Visibilité</label>
-                  <select
-                    className="w-full rounded border p-2"
-                    value={editVisibility}
-                    onChange={(e) => setEditVisibility(e.target.value)}
-                  >
-                    <option value="public">Public</option>
-                    <option value="private">Privé</option>
-                  </select>
-                </div>
-
-                <div className="flex justify-end space-x-2 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2 text-gray-500 hover:text-gray-700"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    type="submit"
-                    className="rounded bg-black px-4 py-2 text-white hover:bg-gray-800"
-                  >
-                    Enregistrer
+                  <button type="button" onClick={handleAddMember} className="rounded bg-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-300">
+                    Ajouter
                   </button>
                 </div>
-              </form>
-            </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">Visibilité</label>
+                <select className="w-full rounded border p-2" value={editVisibility} onChange={(event) => setEditVisibility(event.target.value)}>
+                  <option value="public">Public</option>
+                  <option value="private">Privé</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-500 hover:text-gray-700">
+                  Annuler
+                </button>
+                <button type="submit" className="rounded bg-black px-4 py-2 text-white hover:bg-gray-800">
+                  Enregistrer
+                </button>
+              </div>
+            </form>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Message Feed */}
-      <div className="flex-1 overflow-y-auto bg-[#efeae2] p-4 space-y-4">
+      <div className="flex-1 space-y-4 overflow-y-auto bg-[#efeae2] p-4">
         {user && messages.map((msg) => {
           const isMe = msg.owner._id === user._id;
           const senderIdentifier = msg.owner.username || msg.owner._id;
-          
-          const avatarUrl = isMe && profileAvatar 
-            ? profileAvatar 
-            : svgToDataUrl(generateAvatar(senderIdentifier, 40));
-
-          // Calculate time formatting
+          const avatarUrl = isMe && profileAvatar ? profileAvatar : avatarFor(senderIdentifier);
           const msgDate = new Date(msg.created);
           const timeString = msgDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
           const isEdited = msg.updated && msg.updated !== msg.created;
+          const channelValue = typeof msg.channel === "string" ? msg.channel : msg.channel?._id;
+
+          if (channelValue && channelValue !== chatId) {
+            return null;
+          }
 
           return (
             <div key={msg._id} className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
-              
               {!isMe && (
                 <Link href={`/profiles/${msg.owner._id}`}>
-                  <img 
-                    src={avatarUrl} 
-                    alt={msg.owner.username || "User"} 
-                    className="h-8 w-8 rounded-full flex-shrink-0 mb-1 cursor-pointer hover:opacity-80 transition-opacity"
+                  <img
+                    src={avatarUrl}
+                    alt={msg.owner.username || "User"}
+                    className="mb-1 h-8 w-8 flex-shrink-0 cursor-pointer rounded-full transition-opacity hover:opacity-80"
                   />
                 </Link>
               )}
 
-              <div className={`relative min-w-[100px] max-w-[75%] rounded-lg px-4 py-2 shadow-sm flex flex-col ${isMe ? "bg-[#d9fdd3]" : "bg-white"}`}>
-                
-                {/* Username above message for others */}
+              <div className={`relative flex min-w-[100px] max-w-[75%] flex-col rounded-lg px-4 py-2 shadow-sm ${isMe ? "bg-[#d9fdd3]" : "bg-white"}`}>
                 {!isMe && msg.owner.username && (
-                  <span className="text-[11px] font-bold text-gray-500 block mb-1">
-                    {msg.owner.username}
-                  </span>
+                  <span className="mb-1 block text-[11px] font-bold text-gray-500">{msg.owner.username}</span>
                 )}
-                
-                {/* Content */}
+
                 {msg.content.startsWith("http") ? (
                   <img src={msg.content} alt="GIF" className="max-w-[200px] rounded-lg" />
                 ) : (
                   <p className="text-sm text-gray-900">{msg.content}</p>
                 )}
 
-                {/* Timestamp & Edit status */}
-                <span className={`text-[10px] mt-1 self-end ${isMe ? "text-green-700/70" : "text-gray-400"}`}>
-                  {timeString} {isEdited && <span className="italic ml-1">(edited)</span>}
+                <span className={`mt-1 self-end text-[10px] ${isMe ? "text-green-700/70" : "text-gray-400"}`}>
+                  {timeString} {isEdited && <span className="ml-1 italic">(edited)</span>}
                 </span>
               </div>
 
               {isMe && (
                 <Link href={`/profiles/${user._id}`}>
-                  <img 
-                    src={avatarUrl} 
-                    alt="Me" 
-                    className="h-8 w-8 rounded-full flex-shrink-0 mb-1 cursor-pointer hover:opacity-80 transition-opacity"
+                  <img
+                    src={avatarUrl}
+                    alt="Me"
+                    className="mb-1 h-8 w-8 flex-shrink-0 cursor-pointer rounded-full transition-opacity hover:opacity-80"
                   />
                 </Link>
               )}
-
             </div>
           );
         })}
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* GIF Picker */}
-      {showGifPicker && (
-        <GifPicker onSelect={handleGifSelect} onClose={() => setShowGifPicker(false)} />
-      )}
+      {showGifPicker && <GifPicker onSelect={handleGifSelect} onClose={() => setShowGifPicker(false)} />}
 
-      {/* Input Area */}
-      <div className="flex items-center bg-gray-50 px-4 py-3 gap-2">
-        {/* GIF Button */}
+      <div className="flex items-center gap-2 bg-gray-50 px-4 py-3">
         <button
           type="button"
           onClick={() => setShowGifPicker((prev) => !prev)}
@@ -491,42 +519,36 @@ export default function ChatRoomPage() {
           </svg>
         </button>
 
-        <form onSubmit={handleSendMessage} className="flex-1 flex items-center gap-2">
-          {/* GIF preview or text input */}
+        <form onSubmit={handleSendMessage} className="flex flex-1 items-center gap-2">
           {pendingGif ? (
-            <div className="flex-1 flex items-center gap-3 rounded-2xl bg-white px-3 py-2 shadow-sm">
+            <div className="flex flex-1 items-center gap-3 rounded-2xl bg-white px-3 py-2 shadow-sm">
               <div className="relative flex-shrink-0">
-                <img
-                  src={pendingGif.url}
-                  alt={pendingGif.alt}
-                  className="h-14 w-auto max-w-[160px] rounded-lg object-cover"
-                />
+                <img src={pendingGif.url} alt={pendingGif.alt} className="h-14 w-auto max-w-[160px] rounded-lg object-cover" />
                 <button
                   type="button"
                   onClick={() => setPendingGif(null)}
-                  className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-gray-700 text-white text-[10px] hover:bg-gray-900 transition-colors"
+                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-gray-700 text-[10px] text-white transition-colors hover:bg-gray-900"
                   aria-label="Remove GIF"
                 >
                   ✕
                 </button>
               </div>
-              <span className="text-xs text-gray-400 italic">GIF ready to send</span>
+              <span className="text-xs italic text-gray-400">GIF ready to send</span>
             </div>
           ) : (
             <input
               type="text"
               value={messageInput}
-              onChange={(e) => setMessageInput(e.target.value)}
+              onChange={(event) => setMessageInput(event.target.value)}
               placeholder="Type a message"
-              className="w-full rounded-full border-none bg-white px-4 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-300 shadow-sm"
+              className="w-full rounded-full border-none bg-white px-4 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-1 focus:ring-gray-300"
             />
           )}
 
-          {/* Send button */}
           <button
             type="submit"
             disabled={!canSend}
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-black text-white disabled:bg-gray-300 disabled:text-gray-500 transition-colors"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-black text-white transition-colors disabled:bg-gray-300 disabled:text-gray-500"
           >
             <svg className="h-5 w-5 translate-x-[-1px] translate-y-[1px]" fill="currentColor" viewBox="0 0 24 24">
               <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />

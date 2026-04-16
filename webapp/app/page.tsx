@@ -1,6 +1,19 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { hasActiveSession } from "@/lib/auth";
 
 export default function LandingPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (hasActiveSession()) {
+      router.replace("/home");
+    }
+  }, [router]);
+
   return (
     <div className="min-h-screen bg-white font-sans text-gray-900">
       
