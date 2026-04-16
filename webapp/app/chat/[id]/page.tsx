@@ -63,8 +63,6 @@ export const getMembers = async (chatId: string) => {
     },
   });
 
-  console.log("HOP");
-
   if (!response.ok) {
     throw new Error("Erreur lors de la récupération des membres du canal");
   }
